@@ -1,0 +1,6 @@
+[tool.nonebot]
+adapters = [
+    { name = "OneBot V11", module_name = "nonebot.adapters.onebot.v11" }
+]
+plugins = ["plugins.random_song"]
+plugin_dirs = ["plugins"]

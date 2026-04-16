@@ -1,0 +1,21 @@
+# maimai_rand_song 项目依赖
+
+# 核心依赖
+python-dotenv>=1.0.0
+pydantic>=2.0.0
+
+# QQ机器人
+nonebot2>=2.0.0
+nonebot-adapter-onebot>=2.0.0
+
+# Web后端
+fastapi>=0.100.0
+uvicorn>=0.23.0
+python-multipart>=0.0.6
+
+# 数据处理
+aiofiles>=23.0.0
+
+# 测试
+pytest>=7.0.0
+pytest-asyncio>=0.21.0

@@ -1,0 +1,266 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>maimai随机选歌工具</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+        
+        .container {
+            max-width: 900px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 15px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.2);
+            overflow: hidden;
+        }
+        
+        header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 25px;
+            text-align: center;
+        }
+        
+        header h1 {
+            font-size: 2em;
+            margin-bottom: 5px;
+        }
+        
+        .version {
+            opacity: 0.9;
+            font-size: 0.85em;
+        }
+        
+        main {
+            padding: 25px;
+        }
+        
+        section {
+            margin-bottom: 25px;
+        }
+        
+        h2 {
+            color: #333;
+            margin-bottom: 15px;
+            padding-bottom: 8px;
+            border-bottom: 2px solid #667eea;
+        }
+        
+        .form-panel {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+        }
+        
+        .form-row {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 15px;
+        }
+        
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            font-weight: 600;
+            color: #555;
+        }
+        
+        .form-group input,
+        .form-group select {
+            width: 100%;
+            padding: 8px;
+            border: 2px solid #ddd;
+            border-radius: 5px;
+            font-size: 0.95em;
+        }
+        
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 5px;
+            font-size: 1em;
+            font-weight: 600;
+            cursor: pointer;
+            transition: transform 0.2s;
+        }
+        
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+        }
+        
+        .result-panel {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 10px;
+            min-height: 150px;
+        }
+        
+        .result-card {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            margin-bottom: 10px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+        }
+        
+        .result-card h3 {
+            color: #667eea;
+            margin-bottom: 8px;
+        }
+        
+        .result-card p {
+            color: #666;
+            margin-bottom: 3px;
+        }
+        
+        .placeholder {
+            text-align: center;
+            color: #999;
+            padding: 40px;
+        }
+        
+        .stats {
+            text-align: center;
+            color: #666;
+            margin-bottom: 15px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎵 maimai随机选歌工具</h1>
+            <p class="version">Windows桌面版 - Alpha-0.0.1</p>
+        </header>
+
+        <main>
+            <section class="form-panel">
+                <h2>选歌条件</h2>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="difficulty">难度</label>
+                        <select id="difficulty">
+                            <option value="">全部</option>
+                            <option value="Easy">Easy</option>
+                            <option value="Basic">Basic</option>
+                            <option value="Advanced">Advanced</option>
+                            <option value="Expert">Expert</option>
+                            <option value="Master">Master</option>
+                            <option value="Re:Master">Re:Master</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="minLevel">最低等级</label>
+                        <input type="number" id="minLevel" min="1" max="15" step="0.5">
+                    </div>
+                    <div class="form-group">
+                        <label for="maxLevel">最高等级</label>
+                        <input type="number" id="maxLevel" min="1" max="15" step="0.5">
+                    </div>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label for="songType">歌曲类型</label>
+                        <select id="songType">
+                            <option value="">全部</option>
+                            <option value="标准">标准</option>
+                            <option value="DX">DX</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="genre">流派</label>
+                        <select id="genre">
+                            <option value="">全部</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label for="count">选择数量</label>
+                        <input type="number" id="count" min="1" max="10" value="1">
+                    </div>
+                </div>
+                <button class="btn btn-primary" onclick="selectRandom()">🎲 随机选歌</button>
+            </section>
+
+            <section class="result-panel">
+                <h2>选歌结果</h2>
+                <div id="resultContainer">
+                    <p class="placeholder">请设置条件后点击"随机选歌"</p>
+                </div>
+            </section>
+        </main>
+    </div>
+
+    <script>
+        const { ipcRenderer } = require('electron');
+        
+        async function loadGenres() {
+            const songs = await ipcRenderer.invoke('get-songs');
+            const genres = [...new Set(songs.map(s => s.genre).filter(g => g))];
+            const genreSelect = document.getElementById('genre');
+            genres.forEach(genre => {
+                const option = document.createElement('option');
+                option.value = genre;
+                option.textContent = genre;
+                genreSelect.appendChild(option);
+            });
+        }
+        
+        async function selectRandom() {
+            const criteria = {
+                difficulty: document.getElementById('difficulty').value || null,
+                min_level: parseFloat(document.getElementById('minLevel').value) || null,
+                max_level: parseFloat(document.getElementById('maxLevel').value) || null,
+                song_type: document.getElementById('songType').value || null,
+                genre: document.getElementById('genre').value || null,
+                count: parseInt(document.getElementById('count').value) || 1
+            };
+            
+            const result = await ipcRenderer.invoke('select-random', criteria);
+            displayResults(result);
+        }
+        
+        function displayResults(result) {
+            const container = document.getElementById('resultContainer');
+            
+            if (result.songs.length === 0) {
+                container.innerHTML = '<p class="placeholder">没有找到符合条件的歌曲</p>';
+                return;
+            }
+            
+            container.innerHTML = `
+                <p class="stats">共找到 ${result.total_available} 首符合条件的歌曲</p>
+                ${result.songs.map(song => `
+                    <div class="result-card">
+                        <h3>🎵 ${song.title}</h3>
+                        <p><strong>艺术家：</strong>${song.artist}</p>
+                        <p><strong>类型：</strong>${song.type}</p>
+                        ${song.genre ? `<p><strong>流派：</strong>${song.genre}</p>` : ''}
+                        <p><strong>难度：</strong>${Object.entries(song.difficulties).map(([d, l]) => `${d}:${l}`).join(' | ')}</p>
+                    </div>
+                `).join('')}
+            `;
+        }
+        
+        loadGenres();
+    </script>
+</body>
+</html>

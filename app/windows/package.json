@@ -1,0 +1,27 @@
+{
+  "name": "maimai-rand-song-windows",
+  "version": "0.0.1",
+  "description": "maimai随机选歌工具 - Windows桌面版",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build": "electron-builder"
+  },
+  "author": "",
+  "license": "MIT",
+  "devDependencies": {
+    "electron": "^28.0.0",
+    "electron-builder": "^24.9.1"
+  },
+  "build": {
+    "appId": "com.maimai.rand-song",
+    "productName": "maimai随机选歌",
+    "directories": {
+      "output": "dist"
+    },
+    "win": {
+      "target": "nsis",
+      "icon": "assets/icon.ico"
+    }
+  }
+}

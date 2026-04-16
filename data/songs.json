@@ -1,0 +1,35 @@
+[
+  {
+    "id": "001",
+    "title": "示例歌曲1",
+    "artist": "示例艺术家",
+    "type": "标准",
+    "difficulties": {
+      "Easy": 1.0,
+      "Basic": 3.0,
+      "Advanced": 6.0,
+      "Expert": 9.0,
+      "Master": 12.0
+    },
+    "genre": "流行",
+    "version": "maimai DX",
+    "bpm": 120
+  },
+  {
+    "id": "002",
+    "title": "示例歌曲2",
+    "artist": "示例艺术家2",
+    "type": "DX",
+    "difficulties": {
+      "Easy": 2.0,
+      "Basic": 4.0,
+      "Advanced": 7.0,
+      "Expert": 10.0,
+      "Master": 13.0,
+      "Re:Master": 14.5
+    },
+    "genre": "动画",
+    "version": "maimai DX",
+    "bpm": 140
+  }
+]
