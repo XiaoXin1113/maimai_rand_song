@@ -3,14 +3,19 @@ from pathlib import Path
 from typing import Optional
 from pydantic import BaseModel
 
+PROJECT_ROOT = Path(__file__).parent.parent
+
 class BlacklistEntry(BaseModel):
     group_id: int
     group_name: Optional[str] = None
     reason: Optional[str] = None
 
 class GroupBlacklist:
-    def __init__(self, data_path: str = "data/blacklist.json"):
-        self.data_path = Path(data_path)
+    def __init__(self, data_path: str = None):
+        if data_path is None:
+            self.data_path = PROJECT_ROOT / "data" / "blacklist.json"
+        else:
+            self.data_path = Path(data_path)
         self._blacklist: dict[int, BlacklistEntry] = {}
         self._load()
     
