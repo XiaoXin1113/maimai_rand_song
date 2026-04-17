@@ -41,6 +41,10 @@ class SelectionRequest(BaseModel):
 async def root():
     return FileResponse(Path(__file__).parent.parent / "frontend" / "index.html")
 
+@app.get("/admin")
+async def admin():
+    return FileResponse(Path(__file__).parent.parent / "frontend" / "admin.html")
+
 @app.get("/api/version")
 async def get_version():
     return {"version": "Alpha-0.0.1"}

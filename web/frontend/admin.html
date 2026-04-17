@@ -1,0 +1,370 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>maimai选歌 - 后台管理</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: #1a1a2e;
+            min-height: 100vh;
+            color: #eee;
+        }
+        .container {
+            max-width: 1000px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        header {
+            text-align: center;
+            padding: 30px 0;
+            border-bottom: 1px solid #333;
+            margin-bottom: 30px;
+        }
+        header h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        .nav-links {
+            margin-top: 15px;
+        }
+        .nav-links a {
+            color: #888;
+            text-decoration: none;
+            margin: 0 15px;
+        }
+        .nav-links a:hover {
+            color: #667eea;
+        }
+        .panel {
+            background: #16213e;
+            border-radius: 10px;
+            padding: 25px;
+            margin-bottom: 25px;
+        }
+        .panel h2 {
+            color: #667eea;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid #333;
+        }
+        .form-row {
+            display: flex;
+            gap: 15px;
+            margin-bottom: 15px;
+            flex-wrap: wrap;
+        }
+        .form-group {
+            flex: 1;
+            min-width: 200px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 5px;
+            color: #aaa;
+            font-size: 0.9em;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 12px;
+            border: 1px solid #333;
+            border-radius: 5px;
+            background: #1a1a2e;
+            color: #eee;
+            font-size: 1em;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .btn {
+            padding: 12px 25px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 1em;
+            transition: all 0.2s;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(102, 126, 234, 0.3);
+        }
+        .btn-danger {
+            background: #e74c3c;
+            color: white;
+        }
+        .btn-danger:hover {
+            background: #c0392b;
+        }
+        .btn-sm {
+            padding: 8px 15px;
+            font-size: 0.9em;
+        }
+        .blacklist-table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        .blacklist-table th,
+        .blacklist-table td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid #333;
+        }
+        .blacklist-table th {
+            color: #667eea;
+            font-weight: 600;
+        }
+        .blacklist-table tr:hover {
+            background: #1a1a2e;
+        }
+        .empty-state {
+            text-align: center;
+            padding: 40px;
+            color: #666;
+        }
+        .toast {
+            position: fixed;
+            bottom: 30px;
+            right: 30px;
+            padding: 15px 25px;
+            border-radius: 5px;
+            color: white;
+            font-weight: 500;
+            opacity: 0;
+            transform: translateY(20px);
+            transition: all 0.3s;
+            z-index: 1000;
+        }
+        .toast.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .toast.success {
+            background: #27ae60;
+        }
+        .toast.error {
+            background: #e74c3c;
+        }
+        .status-badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+        }
+        .status-online {
+            background: #27ae60;
+            color: white;
+        }
+        .status-offline {
+            background: #e74c3c;
+            color: white;
+        }
+        .service-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .service-card {
+            background: #1a1a2e;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .service-card h3 {
+            margin-bottom: 10px;
+            color: #aaa;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>⚙️ 后台管理面板</h1>
+            <p style="color: #888;">maimai随机选歌机器人管理系统</p>
+            <div class="nav-links">
+                <a href="/">🏠 前台首页</a>
+                <a href="/admin">⚙️ 管理面板</a>
+            </div>
+        </header>
+
+        <div class="panel">
+            <h2>📊 服务状态</h2>
+            <div class="service-grid">
+                <div class="service-card">
+                    <h3>Bot 服务</h3>
+                    <span class="status-badge status-online" id="botStatus">检测中...</span>
+                </div>
+                <div class="service-card">
+                    <h3>Web API</h3>
+                    <span class="status-badge status-online" id="webStatus">检测中...</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>🚫 群聊黑名单管理</h2>
+            <p style="color: #888; margin-bottom: 20px;">添加群聊到黑名单后，机器人将不会响应该群的任何指令</p>
+            
+            <form id="addBlacklistForm">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>群号 *</label>
+                        <input type="text" id="groupId" placeholder="输入QQ群号" required>
+                    </div>
+                    <div class="form-group">
+                        <label>群名称</label>
+                        <input type="text" id="groupName" placeholder="群名称（可选）">
+                    </div>
+                    <div class="form-group">
+                        <label>禁用原因</label>
+                        <input type="text" id="reason" placeholder="禁用原因（可选）">
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary">➕ 添加到黑名单</button>
+            </form>
+
+            <table class="blacklist-table" id="blacklistTable">
+                <thead>
+                    <tr>
+                        <th>群号</th>
+                        <th>群名称</th>
+                        <th>禁用原因</th>
+                        <th>操作</th>
+                    </tr>
+                </thead>
+                <tbody id="blacklistBody">
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="toast" id="toast"></div>
+
+    <script>
+        const API_BASE = '/api';
+
+        function showToast(message, type = 'success') {
+            const toast = document.getElementById('toast');
+            toast.textContent = message;
+            toast.className = `toast ${type} show`;
+            setTimeout(() => {
+                toast.classList.remove('show');
+            }, 3000);
+        }
+
+        async function fetchAPI(endpoint, options = {}) {
+            try {
+                const response = await fetch(`${API_BASE}${endpoint}`, options);
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || '请求失败');
+                }
+                return await response.json();
+            } catch (error) {
+                throw error;
+            }
+        }
+
+        async function checkServices() {
+            try {
+                await fetchAPI('/version');
+                document.getElementById('webStatus').textContent = '运行中';
+                document.getElementById('webStatus').className = 'status-badge status-online';
+            } catch {
+                document.getElementById('webStatus').textContent = '离线';
+                document.getElementById('webStatus').className = 'status-badge status-offline';
+            }
+        }
+
+        async function loadBlacklist() {
+            try {
+                const data = await fetchAPI('/blacklist');
+                const tbody = document.getElementById('blacklistBody');
+                
+                if (data.blacklist.length === 0) {
+                    tbody.innerHTML = '<tr><td colspan="4" class="empty-state">暂无黑名单记录</td></tr>';
+                    return;
+                }
+                
+                tbody.innerHTML = data.blacklist.map(item => `
+                    <tr>
+                        <td>${item.group_id}</td>
+                        <td>${item.group_name || '-'}</td>
+                        <td>${item.reason || '-'}</td>
+                        <td>
+                            <button class="btn btn-danger btn-sm" onclick="removeBlacklist(${item.group_id})">
+                                移除
+                            </button>
+                        </td>
+                    </tr>
+                `).join('');
+            } catch (error) {
+                showToast('加载黑名单失败: ' + error.message, 'error');
+            }
+        }
+
+        async function addBlacklist(event) {
+            event.preventDefault();
+            
+            const groupId = parseInt(document.getElementById('groupId').value);
+            const groupName = document.getElementById('groupName').value || null;
+            const reason = document.getElementById('reason').value || null;
+            
+            if (!groupId) {
+                showToast('请输入有效的群号', 'error');
+                return;
+            }
+            
+            try {
+                await fetchAPI('/blacklist', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        group_id: groupId,
+                        group_name: groupName,
+                        reason: reason
+                    })
+                });
+                
+                showToast('已添加到黑名单');
+                document.getElementById('addBlacklistForm').reset();
+                loadBlacklist();
+            } catch (error) {
+                showToast('添加失败: ' + error.message, 'error');
+            }
+        }
+
+        async function removeBlacklist(groupId) {
+            if (!confirm('确定要移除该群聊的黑名单吗？')) return;
+            
+            try {
+                await fetchAPI(`/blacklist/${groupId}`, {
+                    method: 'DELETE'
+                });
+                showToast('已从黑名单移除');
+                loadBlacklist();
+            } catch (error) {
+                showToast('移除失败: ' + error.message, 'error');
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            checkServices();
+            loadBlacklist();
+            document.getElementById('addBlacklistForm').addEventListener('submit', addBlacklist);
+        });
+    </script>
+</body>
+</html>
