@@ -45,6 +45,23 @@ async def root():
 async def admin():
     return FileResponse(Path(__file__).parent.parent / "frontend" / "admin.html")
 
+import socket
+
+def check_bot_status():
+    try:
+        sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+        sock.settimeout(2)
+        result = sock.connect_ex(('127.0.0.1', 8080))
+        sock.close()
+        return result == 0
+    except:
+        return False
+
+@app.get("/api/bot-status")
+async def get_bot_status():
+    is_online = check_bot_status()
+    return {"online": is_online}
+
 @app.get("/api/version")
 async def get_version():
     return {"version": "Alpha-0.0.1"}

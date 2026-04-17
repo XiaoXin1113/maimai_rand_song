@@ -286,6 +286,20 @@
                 document.getElementById('webStatus').textContent = '离线';
                 document.getElementById('webStatus').className = 'status-badge status-offline';
             }
+            
+            try {
+                const botData = await fetchAPI('/bot-status');
+                if (botData.online) {
+                    document.getElementById('botStatus').textContent = '运行中';
+                    document.getElementById('botStatus').className = 'status-badge status-online';
+                } else {
+                    document.getElementById('botStatus').textContent = '离线';
+                    document.getElementById('botStatus').className = 'status-badge status-offline';
+                }
+            } catch {
+                document.getElementById('botStatus').textContent = '离线';
+                document.getElementById('botStatus').className = 'status-badge status-offline';
+            }
         }
 
         async function loadBlacklist() {
