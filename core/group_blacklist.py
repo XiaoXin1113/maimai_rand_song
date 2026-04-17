@@ -40,6 +40,7 @@ class GroupBlacklist:
             json.dump(data, f, ensure_ascii=False, indent=2)
     
     def is_blocked(self, group_id: int) -> bool:
+        self._load()
         return group_id in self._blacklist
     
     def add_group(self, group_id: int, group_name: Optional[str] = None, 
