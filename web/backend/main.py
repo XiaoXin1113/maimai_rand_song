@@ -10,6 +10,7 @@ from pathlib import Path
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from core import SongManager, SongSelector, SelectionCriteria, Difficulty, SongType, Song
+from core.group_blacklist import group_blacklist, BlacklistEntry
 
 app = FastAPI(
     title="maimai随机选歌工具",
@@ -38,7 +39,7 @@ class SelectionRequest(BaseModel):
 
 @app.get("/")
 async def root():
-    return FileResponse(Path(__file__).parent / "frontend" / "index.html")
+    return FileResponse(Path(__file__).parent.parent / "frontend" / "index.html")
 
 @app.get("/api/version")
 async def get_version():
@@ -75,8 +76,41 @@ async def add_song(song: Song):
     song_manager.add_song(song)
     return {"message": "Song added successfully", "song": song.model_dump()}
 
-app.mount("/static", StaticFiles(directory=Path(__file__).parent / "frontend" / "static"), name="static")
+class BlacklistAddRequest(BaseModel):
+    group_id: int
+    group_name: Optional[str] = None
+    reason: Optional[str] = None
+
+@app.get("/api/blacklist")
+async def get_blacklist():
+    return {"blacklist": [entry.model_dump() for entry in group_blacklist.get_all()]}
+
+@app.post("/api/blacklist")
+async def add_to_blacklist(request: BlacklistAddRequest):
+    if group_blacklist.is_blocked(request.group_id):
+        raise HTTPException(status_code=400, detail="该群聊已在黑名单中")
+    entry = group_blacklist.add_group(
+        group_id=request.group_id,
+        group_name=request.group_name,
+        reason=request.reason
+    )
+    return {"message": "已添加到黑名单", "entry": entry.model_dump()}
+
+@app.delete("/api/blacklist/{group_id}")
+async def remove_from_blacklist(group_id: int):
+    if not group_blacklist.remove_group(group_id):
+        raise HTTPException(status_code=404, detail="该群聊不在黑名单中")
+    return {"message": "已从黑名单移除", "group_id": group_id}
+
+@app.get("/api/blacklist/{group_id}")
+async def check_blacklist_status(group_id: int):
+    entry = group_blacklist.get_entry(group_id)
+    if entry:
+        return {"blocked": True, "entry": entry.model_dump()}
+    return {"blocked": False}
+
+app.mount("/static", StaticFiles(directory=Path(__file__).parent.parent / "frontend" / "static"), name="static")
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="127.0.0.1", port=8000)
+    uvicorn.run(app, host="0.0.0.0", port=8000)

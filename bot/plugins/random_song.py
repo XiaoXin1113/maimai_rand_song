@@ -1,22 +1,33 @@
-from nonebot import on_command
+import sys
+from pathlib import Path
+sys.path.insert(0, str(Path(__file__).parent.parent.parent))
+
+from nonebot import on_command, on_message
 from nonebot.rule import to_me
-from nonebot.adapters.onebot.v11 import Bot, Event
+from nonebot.adapters.onebot.v11 import Bot, GroupMessageEvent, Message, Event
+from nonebot.params import CommandArg
 from core import SongManager, SongSelector, SelectionCriteria, Difficulty, SongType
+from core.group_blacklist import group_blacklist
 
 song_manager = SongManager()
 song_selector = SongSelector(song_manager)
 
-random_song = on_command("随机选歌", rule=to_me(), priority=5)
+async def check_blacklist(event: Event) -> bool:
+    if isinstance(event, GroupMessageEvent):
+        return not group_blacklist.is_blocked(event.group_id)
+    return True
+
+random_song = on_command("随机选歌", aliases={"选歌"}, priority=5, block=True, rule=check_blacklist)
 
 @random_song.handle()
-async def handle_random_song(bot: Bot, event: Event):
-    args = str(event.get_message()).strip().split()
+async def handle_random_song(bot: Bot, event: GroupMessageEvent, args: Message = CommandArg()):
+    arg_text = args.extract_plain_text().strip()
     
     criteria = SelectionCriteria(count=1)
     
-    if len(args) > 1:
+    if arg_text:
         try:
-            level = float(args[1])
+            level = float(arg_text.split()[0])
             criteria.min_level = level - 0.5
             criteria.max_level = level + 0.5
         except ValueError:
@@ -39,7 +50,7 @@ async def handle_random_song(bot: Bot, event: Event):
     else:
         await random_song.finish("没有找到符合条件的歌曲")
 
-help_cmd = on_command("帮助", rule=to_me(), priority=5)
+help_cmd = on_command("帮助", aliases={"help"}, priority=5, block=True, rule=check_blacklist)
 
 @help_cmd.handle()
 async def handle_help():
