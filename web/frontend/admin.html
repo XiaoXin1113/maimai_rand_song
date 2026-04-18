@@ -453,7 +453,11 @@
 
         async function fetchAPI(endpoint, options = {}) {
             try {
-                const response = await fetch(`${API_BASE}${endpoint}`, options);
+                const defaultOptions = {
+                    credentials: 'include'
+                };
+                const mergedOptions = { ...defaultOptions, ...options };
+                const response = await fetch(`${API_BASE}${endpoint}`, mergedOptions);
                 if (response.status === 401) {
                     window.location.href = '/login';
                     return;
@@ -470,7 +474,16 @@
 
         async function checkAuth() {
             try {
-                const data = await fetchAPI('/check-auth');
+                const response = await fetch(`${API_BASE}/check-auth`, {
+                    credentials: 'include'
+                });
+                
+                if (!response.ok) {
+                    window.location.href = '/login';
+                    return false;
+                }
+                
+                const data = await response.json();
                 if (!data.authenticated) {
                     window.location.href = '/login';
                     return false;
@@ -478,6 +491,7 @@
                 document.getElementById('userInfo').textContent = `当前用户: ${data.username}`;
                 return true;
             } catch (error) {
+                console.error('Auth check failed:', error);
                 window.location.href = '/login';
                 return false;
             }
