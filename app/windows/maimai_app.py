@@ -1,21 +1,17 @@
 import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext
 import sys
-import threading
-import webbrowser
 from pathlib import Path
-from datetime import datetime
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
-from core import SongManager, SongSelector, SelectionCriteria, Difficulty, SongType, Song
-from core.group_blacklist import group_blacklist
+from core import SongManager, SongSelector, SelectionCriteria, Difficulty, SongType, parse_level_input
 
 class MaimaiApp:
     def __init__(self, root):
         self.root = root
         self.root.title("maimai随机选歌工具 - Windows桌面版")
-        self.root.geometry("1000x750")
+        self.root.geometry("1000x700")
         self.root.minsize(800, 600)
         
         self.song_manager = SongManager()
@@ -35,7 +31,6 @@ class MaimaiApp:
         style.configure('Header.TLabel', font=('Microsoft YaHei UI', 11, 'bold'), foreground='#333')
         style.configure('Info.TLabel', font=('Microsoft YaHei UI', 10), foreground='#666')
         style.configure('Primary.TButton', font=('Microsoft YaHei UI', 11, 'bold'), padding=10)
-        style.configure('Card.TFrame', background='#f8f9fa')
         
     def create_menu(self):
         menubar = tk.Menu(self.root)
@@ -47,15 +42,10 @@ class MaimaiApp:
         file_menu.add_separator()
         file_menu.add_command(label="退出", command=self.root.quit)
         
-        tool_menu = tk.Menu(menubar, tearoff=0)
-        menubar.add_cascade(label="工具", menu=tool_menu)
-        tool_menu.add_command(label="黑名单管理", command=self.open_blacklist_window)
-        tool_menu.add_command(label="数据库统计", command=self.show_database_stats)
-        
         help_menu = tk.Menu(menubar, tearoff=0)
         menubar.add_cascade(label="帮助", menu=help_menu)
-        help_menu.add_command(label="关于", command=self.show_about)
         help_menu.add_command(label="使用说明", command=self.show_help)
+        help_menu.add_command(label="关于", command=self.show_about)
         
     def create_main_frame(self):
         main_frame = ttk.Frame(self.root, padding="15")
@@ -110,13 +100,13 @@ class MaimaiApp:
         self.min_level_var = tk.StringVar(value="")
         min_level_entry = ttk.Entry(level_frame, textvariable=self.min_level_var, width=10)
         min_level_entry.grid(row=0, column=1, sticky=tk.W, pady=5, padx=10)
-        ttk.Label(level_frame, text="(如: 14.0, 14+, 14)", style='Info.TLabel').grid(row=0, column=2, sticky=tk.W)
+        ttk.Label(level_frame, text="(如: 14, 14+, 14.5)", style='Info.TLabel').grid(row=0, column=2, sticky=tk.W)
         
         ttk.Label(level_frame, text="最高等级:").grid(row=1, column=0, sticky=tk.W, pady=5)
         self.max_level_var = tk.StringVar(value="")
         max_level_entry = ttk.Entry(level_frame, textvariable=self.max_level_var, width=10)
         max_level_entry.grid(row=1, column=1, sticky=tk.W, pady=5, padx=10)
-        ttk.Label(level_frame, text="(如: 14.5, 14+, 14)", style='Info.TLabel').grid(row=1, column=2, sticky=tk.W)
+        ttk.Label(level_frame, text="(如: 14, 14+, 14.5)", style='Info.TLabel').grid(row=1, column=2, sticky=tk.W)
         
         count_frame = ttk.Frame(parent)
         count_frame.pack(fill=tk.X, pady=10)
@@ -166,34 +156,6 @@ class MaimaiApp:
         total_charts = sum(len(song.charts) for song in songs)
         self.stats_label.config(text=f"总歌曲: {total_songs} | 总谱面: {total_charts}")
         
-    def parse_level_input(self, level_str: str) -> tuple:
-        if not level_str:
-            return None, None
-            
-        level_str = level_str.strip()
-        has_plus = "+" in level_str
-        level_str_clean = level_str.replace("+", "")
-        has_decimal = "." in level_str_clean
-        
-        try:
-            level = float(level_str_clean)
-        except ValueError:
-            return None, None
-            
-        if has_plus:
-            level_int = int(level)
-            min_level = level_int + 0.6
-            max_level = level_int + 0.9
-        elif not has_decimal and level == int(level):
-            level_int = int(level)
-            min_level = level_int + 0.0
-            max_level = level_int + 0.5
-        else:
-            min_level = level - 0.05
-            max_level = level + 0.05
-            
-        return min_level, max_level
-        
     def select_random(self):
         difficulty_map = {
             'Easy': Difficulty.EASY,
@@ -201,7 +163,7 @@ class MaimaiApp:
             'Advanced': Difficulty.ADVANCED,
             'Expert': Difficulty.EXPERT,
             'Master': Difficulty.MASTER,
-            'Re:Master': Difficulty.REMASTER
+            'Re:Master': Difficulty.RE_MASTER
         }
         
         type_map = {
@@ -217,9 +179,9 @@ class MaimaiApp:
         max_str = self.max_level_var.get().strip()
         
         if min_str:
-            min_level, _ = self.parse_level_input(min_str)
+            min_level, _ = parse_level_input(min_str)
         if max_str:
-            _, max_level = self.parse_level_input(max_str)
+            _, max_level = parse_level_input(max_str)
             
         try:
             count = int(self.count_var.get())
@@ -252,7 +214,9 @@ class MaimaiApp:
         for i, song in enumerate(result.songs, 1):
             self.result_text.insert(tk.END, f"【{i}】{song.title}\n", 'title')
             self.result_text.insert(tk.END, f"    艺术家: {song.artist}\n", 'info')
-            self.result_text.insert(tk.END, f"    类型: {song.type.value.upper()}\n", 'info')
+            
+            type_display = "DX" if song.type == SongType.DX else "标准"
+            self.result_text.insert(tk.END, f"    类型: {type_display}\n", 'info')
             
             if song.genre:
                 self.result_text.insert(tk.END, f"    流派: {song.genre}\n", 'info')
@@ -263,7 +227,7 @@ class MaimaiApp:
             
             charts_by_type = {}
             for chart in song.charts:
-                type_key = chart.type.value.upper()
+                type_key = "DX" if chart.type == SongType.DX else "标准"
                 if type_key not in charts_by_type:
                     charts_by_type[type_key] = []
                 charts_by_type[type_key].append(chart)
@@ -296,120 +260,13 @@ class MaimaiApp:
         self.update_stats()
         messagebox.showinfo("成功", "数据库已刷新")
         
-    def open_blacklist_window(self):
-        blacklist_window = tk.Toplevel(self.root)
-        blacklist_window.title("黑名单管理")
-        blacklist_window.geometry("500x400")
-        
-        frame = ttk.Frame(blacklist_window, padding="15")
-        frame.pack(fill=tk.BOTH, expand=True)
-        
-        ttk.Label(frame, text="群号黑名单", style='Header.TLabel').pack(anchor=tk.W)
-        
-        list_frame = ttk.Frame(frame)
-        list_frame.pack(fill=tk.BOTH, expand=True, pady=10)
-        
-        scrollbar = ttk.Scrollbar(list_frame)
-        scrollbar.pack(side=tk.RIGHT, fill=tk.Y)
-        
-        blacklist_listbox = tk.Listbox(list_frame, yscrollcommand=scrollbar.set)
-        blacklist_listbox.pack(fill=tk.BOTH, expand=True)
-        scrollbar.config(command=blacklist_listbox.yview)
-        
-        for entry in group_blacklist.get_all():
-            blacklist_listbox.insert(tk.END, f"{entry.group_id} - {entry.group_name or '未知'} ({entry.reason or '无原因'})")
-            
-        add_frame = ttk.Frame(frame)
-        add_frame.pack(fill=tk.X, pady=10)
-        
-        ttk.Label(add_frame, text="群号:").grid(row=0, column=0, sticky=tk.W)
-        group_id_entry = ttk.Entry(add_frame, width=15)
-        group_id_entry.grid(row=0, column=1, padx=5)
-        
-        ttk.Label(add_frame, text="群名:").grid(row=0, column=2, sticky=tk.W, padx=(10, 0))
-        group_name_entry = ttk.Entry(add_frame, width=15)
-        group_name_entry.grid(row=0, column=3, padx=5)
-        
-        def add_to_blacklist():
-            try:
-                group_id = int(group_id_entry.get())
-                group_name = group_name_entry.get() or None
-                if not group_blacklist.is_blocked(group_id):
-                    group_blacklist.add_group(group_id, group_name)
-                    blacklist_listbox.insert(tk.END, f"{group_id} - {group_name or '未知'}")
-                    group_id_entry.delete(0, tk.END)
-                    group_name_entry.delete(0, tk.END)
-                else:
-                    messagebox.showwarning("警告", "该群已在黑名单中")
-            except ValueError:
-                messagebox.showerror("错误", "请输入有效的群号")
-                
-        def remove_from_blacklist():
-            selection = blacklist_listbox.curselection()
-            if selection:
-                group_id = int(blacklist_listbox.get(selection[0]).split(" - ")[0])
-                group_blacklist.remove_group(group_id)
-                blacklist_listbox.delete(selection[0])
-                
-        btn_frame = ttk.Frame(frame)
-        btn_frame.pack(fill=tk.X)
-        
-        ttk.Button(btn_frame, text="添加", command=add_to_blacklist).pack(side=tk.LEFT, padx=5)
-        ttk.Button(btn_frame, text="删除", command=remove_from_blacklist).pack(side=tk.LEFT, padx=5)
-        
-    def show_database_stats(self):
-        songs = self.song_manager.get_all_songs()
-        total_songs = len(songs)
-        total_charts = sum(len(song.charts) for song in songs)
-        
-        difficulty_counts = {}
-        type_counts = {'STD': 0, 'DX': 0}
-        
-        for song in song_manager.get_all_songs():
-            for chart in song.charts:
-                diff = chart.difficulty.value
-                difficulty_counts[diff] = difficulty_counts.get(diff, 0) + 1
-                if chart.type == SongType.STANDARD:
-                    type_counts['STD'] += 1
-                else:
-                    type_counts['DX'] += 1
-                    
-        stats_window = tk.Toplevel(self.root)
-        stats_window.title("数据库统计")
-        stats_window.geometry("400x350")
-        
-        frame = ttk.Frame(stats_window, padding="20")
-        frame.pack(fill=tk.BOTH, expand=True)
-        
-        ttk.Label(frame, text="数据库统计信息", style='Title.TLabel').pack(anchor=tk.W, pady=(0, 15))
-        ttk.Label(frame, text=f"总歌曲数: {total_songs}", style='Header.TLabel').pack(anchor=tk.W, pady=5)
-        ttk.Label(frame, text=f"总谱面数: {total_charts}", style='Header.TLabel').pack(anchor=tk.W, pady=5)
-        
-        ttk.Separator(frame, orient='horizontal').pack(fill=tk.X, pady=10)
-        
-        ttk.Label(frame, text="谱面类型分布:", style='Header.TLabel').pack(anchor=tk.W, pady=5)
-        ttk.Label(frame, text=f"  STD: {type_counts['STD']}", style='Info.TLabel').pack(anchor=tk.W)
-        ttk.Label(frame, text=f"  DX: {type_counts['DX']}", style='Info.TLabel').pack(anchor=tk.W)
-        
-        ttk.Separator(frame, orient='horizontal').pack(fill=tk.X, pady=10)
-        
-        ttk.Label(frame, text="难度分布:", style='Header.TLabel').pack(anchor=tk.W, pady=5)
-        for diff in ['Easy', 'Basic', 'Advanced', 'Expert', 'Master', 'Re:Master']:
-            count = difficulty_counts.get(diff, 0)
-            ttk.Label(frame, text=f"  {diff}: {count}", style='Info.TLabel').pack(anchor=tk.W)
-            
     def show_about(self):
-        about_window = tk.Toplevel(self.root)
-        about_window.title("关于")
-        about_window.geometry("400x250")
-        
-        frame = ttk.Frame(about_window, padding="20")
-        frame.pack(fill=tk.BOTH, expand=True)
-        
-        ttk.Label(frame, text="🎵 maimai随机选歌工具", style='Title.TLabel').pack(pady=10)
-        ttk.Label(frame, text="Windows桌面版 - Alpha-0.0.3", style='Info.TLabel').pack()
-        ttk.Label(frame, text="\n一款用于maimai游戏的随机选歌工具\n支持精确难度筛选、多条件组合查询", style='Info.TLabel').pack(pady=10)
-        ttk.Label(frame, text="© 2024", style='Info.TLabel').pack()
+        messagebox.showinfo("关于", 
+            "🎵 maimai随机选歌工具\n\n"
+            "Windows桌面版 - Alpha-0.0.3\n\n"
+            "一款用于maimai游戏的随机选歌工具\n"
+            "支持精确难度筛选、多条件组合查询"
+        )
         
     def show_help(self):
         help_window = tk.Toplevel(self.root)
@@ -422,9 +279,9 @@ class MaimaiApp:
         help_content = """使用说明
 
 【等级输入规则】
-• 整数输入 (如 14): 匹配 14.0 ~ 14.5
+• 整数输入 (如 14): 匹配 14.0 ~ 14.5 (广义等级)
 • 带加号输入 (如 14+): 匹配 14.6 ~ 14.9
-• 小数输入 (如 14.7): 精确匹配 14.65 ~ 14.75
+• 小数输入 (如 14.5): 精确匹配 14.45 ~ 14.55
 
 【选歌条件】
 • 难度: 选择谱面难度 (Easy ~ Re:Master)
@@ -432,13 +289,6 @@ class MaimaiApp:
 • 流派: 选择歌曲流派
 • 等级范围: 设置最低和最高等级
 • 随机次数: 随机抽取的次数 (可重复)
-
-【功能说明】
-• 随机选歌: 根据条件随机选择歌曲
-• 清空条件: 重置所有筛选条件
-• 刷新数据库: 重新加载数据库文件
-• 黑名单管理: 管理QQ群黑名单
-• 数据库统计: 查看数据库详细信息
 
 【快捷键】
 • Ctrl+R: 随机选歌

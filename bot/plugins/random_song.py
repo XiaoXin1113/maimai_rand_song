@@ -6,7 +6,7 @@ from nonebot import on_command, on_message
 from nonebot.rule import to_me
 from nonebot.adapters.onebot.v11 import Bot, GroupMessageEvent, Message, Event
 from nonebot.params import CommandArg
-from core import SongManager, SongSelector, SelectionCriteria, Difficulty, SongType
+from core import SongManager, SongSelector, SelectionCriteria, Difficulty, SongType, parse_level_input
 from core.group_blacklist import group_blacklist
 
 song_manager = SongManager()
@@ -32,30 +32,6 @@ async def check_blacklist(event: Event) -> bool:
     if isinstance(event, GroupMessageEvent):
         return not group_blacklist.is_blocked(event.group_id)
     return True
-
-def parse_level_input(level_str: str) -> tuple[float, float]:
-    has_plus = "+" in level_str
-    level_str_clean = level_str.replace("+", "")
-    has_decimal = "." in level_str_clean
-    
-    try:
-        level = float(level_str_clean)
-    except ValueError:
-        return None, None
-    
-    if has_plus:
-        level_int = int(level)
-        min_level = level_int + 0.6
-        max_level = level_int + 0.9
-    elif not has_decimal and level == int(level):
-        level_int = int(level)
-        min_level = level_int + 0.0
-        max_level = level_int + 0.5
-    else:
-        min_level = level - 0.05
-        max_level = level + 0.05
-    
-    return min_level, max_level
 
 random_song = on_command("random_song", aliases={"rs"}, priority=5, block=True, rule=check_blacklist)
 
