@@ -220,6 +220,13 @@ async def get_genres():
             genres.add(song.genre)
     return {"genres": list(genres)}
 
+@app.get("/api/stats")
+async def get_stats():
+    songs = song_manager.get_all_songs()
+    total_songs = len(songs)
+    total_charts = sum(len(song.charts) for song in songs)
+    return {"total_songs": total_songs, "total_charts": total_charts}
+
 @app.post("/api/songs")
 async def add_song(song: Song):
     song_manager.add_song(song)

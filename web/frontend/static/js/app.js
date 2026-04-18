@@ -30,23 +30,18 @@ async function loadGenres() {
 
 async function loadSongs() {
     try {
-        const data = await fetchAPI('/songs');
+        const data = await fetchAPI('/stats');
         const container = document.getElementById('songListContainer');
         
-        if (data.songs.length === 0) {
-            container.innerHTML = '<p class="placeholder">暂无歌曲数据</p>';
-            return;
-        }
-        
-        container.innerHTML = data.songs.map(song => `
-            <div class="song-item">
-                <h4>${song.title}</h4>
-                <p>艺术家：${song.artist} | 类型：${song.type}</p>
-                ${song.genre ? `<p>流派：${song.genre}</p>` : ''}
+        container.innerHTML = `
+            <div class="song-stats">
+                <p><strong>总歌曲数：</strong>${data.total_songs}</p>
+                <p><strong>总谱面数：</strong>${data.total_charts}</p>
+                <p class="hint">使用上方选歌功能随机选择歌曲</p>
             </div>
-        `).join('');
+        `;
     } catch (error) {
-        console.error('Failed to load songs:', error);
+        console.error('Failed to load stats:', error);
         document.getElementById('songListContainer').innerHTML = 
             '<p class="placeholder">加载失败，请刷新重试</p>';
     }
