@@ -96,16 +96,17 @@ class SongSelector:
     def __init__(self, song_manager: SongManager):
         self.song_manager = song_manager
     
-    def get_chart_level(self, song: Song, difficulty: Difficulty, song_type: SongType) -> Optional[float]:
+    def get_chart_level(self, song: Song, difficulty: Difficulty, song_type: SongType = None) -> Optional[float]:
         for chart in song.charts:
-            if chart.difficulty == difficulty and chart.type == song_type:
-                if chart.internal_level:
-                    return chart.internal_level
-                try:
-                    level_str = chart.level.replace("+", ".7")
-                    return float(level_str)
-                except ValueError:
-                    return None
+            if chart.difficulty == difficulty:
+                if song_type is None or chart.type == song_type:
+                    if chart.internal_level:
+                        return chart.internal_level
+                    try:
+                        level_str = chart.level.replace("+", ".7")
+                        return float(level_str)
+                    except ValueError:
+                        return None
         return None
     
     def filter_songs(self, criteria: SelectionCriteria) -> list[Song]:
@@ -124,18 +125,20 @@ class SongSelector:
             ]
         
         if criteria.difficulty:
+            target_type = criteria.song_type if criteria.song_type else None
+            
             if criteria.min_level is not None:
                 filtered = [
                     s for s in filtered
-                    if self.get_chart_level(s, criteria.difficulty, criteria.song_type or SongType.STANDARD) is not None
-                    and self.get_chart_level(s, criteria.difficulty, criteria.song_type or SongType.STANDARD) >= criteria.min_level
+                    if self.get_chart_level(s, criteria.difficulty, target_type) is not None
+                    and self.get_chart_level(s, criteria.difficulty, target_type) >= criteria.min_level
                 ]
             
             if criteria.max_level is not None:
                 filtered = [
                     s for s in filtered
-                    if self.get_chart_level(s, criteria.difficulty, criteria.song_type or SongType.STANDARD) is not None
-                    and self.get_chart_level(s, criteria.difficulty, criteria.song_type or SongType.STANDARD) <= criteria.max_level
+                    if self.get_chart_level(s, criteria.difficulty, target_type) is not None
+                    and self.get_chart_level(s, criteria.difficulty, target_type) <= criteria.max_level
                 ]
         
         return filtered
