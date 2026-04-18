@@ -33,6 +33,30 @@ async def check_blacklist(event: Event) -> bool:
         return not group_blacklist.is_blocked(event.group_id)
     return True
 
+def parse_level_input(level_str: str) -> tuple[float, float]:
+    has_plus = "+" in level_str
+    level_str_clean = level_str.replace("+", "")
+    has_decimal = "." in level_str_clean
+    
+    try:
+        level = float(level_str_clean)
+    except ValueError:
+        return None, None
+    
+    if has_plus:
+        level_int = int(level)
+        min_level = level_int + 0.6
+        max_level = level_int + 0.9
+    elif not has_decimal and level == int(level):
+        level_int = int(level)
+        min_level = level_int + 0.0
+        max_level = level_int + 0.5
+    else:
+        min_level = level - 0.05
+        max_level = level + 0.05
+    
+    return min_level, max_level
+
 random_song = on_command("random_song", aliases={"rs"}, priority=5, block=True, rule=check_blacklist)
 
 @random_song.handle()
@@ -67,12 +91,10 @@ async def handle_random_song(bot: Bot, event: GroupMessageEvent, args: Message =
             criteria.song_type = SongType.UTAGE
             target_type = SongType.UTAGE
         else:
-            try:
-                level = float(part.replace("+", ".7"))
-                criteria.min_level = level - 0.3
-                criteria.max_level = level + 0.3
-            except ValueError:
-                pass
+            min_lv, max_lv = parse_level_input(part)
+            if min_lv is not None:
+                criteria.min_level = min_lv
+                criteria.max_level = max_lv
     
     criteria.difficulty = target_difficulty
     
@@ -203,8 +225,10 @@ async def handle_level_list(bot: Bot, event: GroupMessageEvent, args: Message = 
     arg_text = args.extract_plain_text().strip()
     parts = arg_text.split() if arg_text else []
     
-    target_level = None
+    min_level = None
+    max_level = None
     target_difficulty = Difficulty.MASTER
+    level_display = None
     
     for part in parts:
         part_lower = part.lower()
@@ -216,13 +240,14 @@ async def handle_level_list(bot: Bot, event: GroupMessageEvent, args: Message = 
         elif part_lower in ["expert", "exp", "e"]:
             target_difficulty = Difficulty.EXPERT
         else:
-            try:
-                target_level = float(part.replace("+", ".7"))
-            except ValueError:
-                pass
+            min_lv, max_lv = parse_level_input(part)
+            if min_lv is not None:
+                min_level = min_lv
+                max_level = max_lv
+                level_display = part.replace(".7", "+")
     
-    if target_level is None:
-        await level_list.finish("Please specify a level, e.g.: level 14.5")
+    if min_level is None:
+        await level_list.finish("Please specify a level, e.g.: level 14, level 14+, level 14.5")
     
     all_songs = song_manager.get_all_songs()
     results = []
@@ -230,16 +255,17 @@ async def handle_level_list(bot: Bot, event: GroupMessageEvent, args: Message = 
     for song in all_songs:
         for chart in song.charts:
             if chart.difficulty == target_difficulty and chart.internal_level:
-                if abs(chart.internal_level - target_level) < 0.1:
+                if min_level <= chart.internal_level <= max_level:
                     results.append((song, chart))
     
     if not results:
-        await level_list.finish(f"No {DIFFICULTY_NAMES.get(target_difficulty, '')} charts found with level {target_level}")
+        diff_str = DIFFICULTY_NAMES.get(target_difficulty, target_difficulty.value)
+        await level_list.finish(f"No {diff_str} charts found with level {level_display}")
     
     results.sort(key=lambda x: x[0].title)
     
     diff_str = DIFFICULTY_NAMES.get(target_difficulty, target_difficulty.value)
-    msg = f"Level {target_level} {diff_str} charts ({len(results)} songs)\n\n"
+    msg = f"Level {level_display} {diff_str} charts ({len(results)} songs)\n\n"
     
     for i, (song, chart) in enumerate(results[:20], 1):
         type_str = "DX" if chart.type == SongType.DX else ""
@@ -259,11 +285,16 @@ async def handle_help():
 Commands:
 
 [Song Selection]
-random_song / rs - Random song selection
-random_song [level] - Random song with specified level
-random_song [level] [difficulty] - Specify difficulty
-random_song dx [level] - Random DX chart
-random_song utage - Random Utage chart
+rs - Random song (default: Master)
+rs [level] - Random song at level (e.g. rs 14, rs 14+, rs 14.5)
+rs [difficulty] [level] - Specify difficulty
+rs dx [level] - Random DX chart
+rs utage - Random Utage chart
+
+Level input:
+- Integer (14): 14.0-14.5
+- Plus (14+): 14.6-14.9
+- Decimal (14.5): exact match +/- 0.05
 
 Difficulty keywords:
 easy/basic/advanced/expert/master/remaster/utage
@@ -272,10 +303,10 @@ easy/basic/advanced/expert/master/remaster/utage
 search [keyword] - Search song info
 
 [Level List]
-level [level] - View songs at specified level
-level [level] [difficulty] - View level list by difficulty
+level [level] - View songs at level
+level [level] [difficulty] - By difficulty
 
-Version: Alpha-0.0.2
-Songs: 1317
+Version: Alpha-0.0.3
+Songs: 1454
 """
     await help_cmd.finish(help_text)
