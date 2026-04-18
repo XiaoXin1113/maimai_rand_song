@@ -127,22 +127,37 @@ class SongSelector:
                 if s.version == criteria.version or any(c.version == criteria.version for c in s.charts)
             ]
         
-        if criteria.difficulty:
-            target_type = criteria.song_type if criteria.song_type else None
+        if criteria.min_level is not None or criteria.max_level is not None:
+            target_difficulty = criteria.difficulty
+            target_type = criteria.song_type
             
-            if criteria.min_level is not None:
-                filtered = [
-                    s for s in filtered
-                    if self.get_chart_level(s, criteria.difficulty, target_type) is not None
-                    and self.get_chart_level(s, criteria.difficulty, target_type) >= criteria.min_level
-                ]
+            def song_matches_level(song: Song) -> bool:
+                for chart in song.charts:
+                    if target_difficulty and chart.difficulty != target_difficulty:
+                        continue
+                    if target_type and chart.type != target_type:
+                        continue
+                    
+                    level = chart.internal_level
+                    if level is None:
+                        try:
+                            level_str = chart.level.replace("+", ".7")
+                            level = float(level_str)
+                        except ValueError:
+                            continue
+                    
+                    if level is None:
+                        continue
+                    
+                    if criteria.min_level is not None and level < criteria.min_level:
+                        continue
+                    if criteria.max_level is not None and level > criteria.max_level:
+                        continue
+                    
+                    return True
+                return False
             
-            if criteria.max_level is not None:
-                filtered = [
-                    s for s in filtered
-                    if self.get_chart_level(s, criteria.difficulty, target_type) is not None
-                    and self.get_chart_level(s, criteria.difficulty, target_type) <= criteria.max_level
-                ]
+            filtered = [s for s in filtered if song_matches_level(s)]
         
         return filtered
     
