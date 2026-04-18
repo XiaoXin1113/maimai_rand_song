@@ -479,20 +479,19 @@
                 });
                 
                 if (!response.ok) {
-                    window.location.href = '/login';
+                    console.error('Auth check failed with status:', response.status);
                     return false;
                 }
                 
                 const data = await response.json();
                 if (!data.authenticated) {
-                    window.location.href = '/login';
+                    window.location.replace('/login');
                     return false;
                 }
                 document.getElementById('userInfo').textContent = `当前用户: ${data.username}`;
                 return true;
             } catch (error) {
                 console.error('Auth check failed:', error);
-                window.location.href = '/login';
                 return false;
             }
         }

@@ -111,7 +111,22 @@ function displayResults(result) {
         <p style="margin-bottom: 15px; color: #666;">
             共找到 ${result.total_available} 首符合条件的歌曲
         </p>
-        ${result.songs.map(song => `
+        ${result.songs.map(song => {
+            const chartsByType = {};
+            song.charts.forEach(chart => {
+                const typeKey = chart.type;
+                if (!chartsByType[typeKey]) chartsByType[typeKey] = [];
+                chartsByType[typeKey].push(chart);
+            });
+            
+            let chartsHtml = '';
+            for (const [type, charts] of Object.entries(chartsByType)) {
+                chartsHtml += `<div style="margin-top: 5px;"><strong>${type}:</strong> `;
+                chartsHtml += charts.map(c => `${c.difficulty} ${c.level}`).join(' | ');
+                chartsHtml += '</div>';
+            }
+            
+            return `
             <div class="result-card">
                 <h3>🎵 ${song.title}</h3>
                 <p><strong>艺术家：</strong>${song.artist}</p>
@@ -119,13 +134,11 @@ function displayResults(result) {
                 ${song.genre ? `<p><strong>流派：</strong>${song.genre}</p>` : ''}
                 ${song.bpm ? `<p><strong>BPM：</strong>${song.bpm}</p>` : ''}
                 <div style="margin-top: 10px;">
-                    <strong>难度：</strong>
-                    ${Object.entries(song.difficulties).map(([diff, level]) => 
-                        `<span style="margin-right: 10px;">${diff}: ${level}</span>`
-                    ).join('')}
+                    <strong>谱面：</strong>
+                    ${chartsHtml}
                 </div>
             </div>
-        `).join('')}
+        `}).join('')}
     `;
 }
 
