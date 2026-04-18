@@ -113,7 +113,10 @@ class SongSelector:
         filtered = self.song_manager.get_all_songs()
         
         if criteria.song_type:
-            filtered = [s for s in filtered if s.type == criteria.song_type]
+            filtered = [
+                s for s in filtered 
+                if any(chart.type == criteria.song_type for chart in s.charts)
+            ]
         
         if criteria.genre:
             filtered = [s for s in filtered if s.genre == criteria.genre]
