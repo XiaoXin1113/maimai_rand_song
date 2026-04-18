@@ -55,11 +55,29 @@ async function loadSongs() {
 async function selectSongs(event) {
     event.preventDefault();
     
+    const difficultyMap = {
+        'Easy': 'easy',
+        'Basic': 'basic',
+        'Advanced': 'advanced',
+        'Expert': 'expert',
+        'Master': 'master',
+        'Re:Master': 'remaster'
+    };
+    
+    const typeMap = {
+        '': null,
+        'std': 'std',
+        'DX': 'dx'
+    };
+    
+    const diffValue = document.getElementById('difficulty').value;
+    const typeValue = document.getElementById('songType').value;
+    
     const formData = {
-        difficulty: document.getElementById('difficulty').value || null,
+        difficulty: difficultyMap[diffValue] || null,
         min_level: parseFloat(document.getElementById('minLevel').value) || null,
         max_level: parseFloat(document.getElementById('maxLevel').value) || null,
-        song_type: document.getElementById('songType').value || null,
+        song_type: typeMap[typeValue] || null,
         genre: document.getElementById('genre').value || null,
         count: parseInt(document.getElementById('count').value) || 1
     };

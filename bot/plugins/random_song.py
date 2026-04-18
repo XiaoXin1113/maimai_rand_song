@@ -23,7 +23,7 @@ DIFFICULTY_NAMES = {
 }
 
 TYPE_NAMES = {
-    SongType.STANDARD: "标准",
+    SongType.STANDARD: "std",
     SongType.DX: "DX",
     SongType.UTAGE: "Utage",
 }
@@ -33,7 +33,7 @@ async def check_blacklist(event: Event) -> bool:
         return not group_blacklist.is_blocked(event.group_id)
     return True
 
-random_song = on_command("随机选歌", aliases={"选歌"}, priority=5, block=True, rule=check_blacklist)
+random_song = on_command("random_song", aliases={"rs"}, priority=5, block=True, rule=check_blacklist)
 
 @random_song.handle()
 async def handle_random_song(bot: Bot, event: GroupMessageEvent, args: Message = CommandArg()):
@@ -47,7 +47,7 @@ async def handle_random_song(bot: Bot, event: GroupMessageEvent, args: Message =
     for part in parts:
         part_lower = part.lower()
         
-        if part_lower in ["dx", "标准", "std"]:
+        if part_lower in ["dx", "std"]:
             criteria.song_type = SongType.DX if part_lower == "dx" else SongType.STANDARD
             target_type = criteria.song_type
         elif part_lower in ["easy", "ez"]:
@@ -60,7 +60,7 @@ async def handle_random_song(bot: Bot, event: GroupMessageEvent, args: Message =
             target_difficulty = Difficulty.EXPERT
         elif part_lower in ["master", "mas", "m"]:
             target_difficulty = Difficulty.MASTER
-        elif part_lower in ["remaster", "rem", "r", "re:master"]:
+        elif part_lower in ["remaster", "rem", "r"]:
             target_difficulty = Difficulty.RE_MASTER
         elif part_lower in ["utage", "u"]:
             target_difficulty = Difficulty.UTAGE
@@ -80,14 +80,14 @@ async def handle_random_song(bot: Bot, event: GroupMessageEvent, args: Message =
     
     if result.songs:
         song = result.songs[0]
-        msg = f"🎵 随机选歌结果\n\n"
-        msg += f"📌 {song.title}\n"
-        msg += f"👤 {song.artist}\n"
+        msg = f"Random Song Result\n\n"
+        msg += f"Title: {song.title}\n"
+        msg += f"Artist: {song.artist}\n"
         
         if song.genre:
-            msg += f"🎭 流派：{song.genre}\n"
+            msg += f"Genre: {song.genre}\n"
         
-        msg += f" BPM：{song.bpm}\n"
+        msg += f"BPM: {song.bpm}\n"
         
         matching_charts = []
         for chart in song.charts:
@@ -104,39 +104,39 @@ async def handle_random_song(bot: Bot, event: GroupMessageEvent, args: Message =
             if chart.internal_level:
                 level_display += f" ({chart.internal_level:.1f})"
             
-            msg += f"\n📊 [{type_str}] {diff_str} {level_display}\n"
+            msg += f"\n[{type_str}] {diff_str} {level_display}\n"
             
             if chart.note_designer:
-                msg += f"✍️ 谱师：{chart.note_designer}\n"
+                msg += f"Charter: {chart.note_designer}\n"
             
             if chart.note_counts:
                 nc = chart.note_counts
-                msg += f"🎵 音符：Tap {nc.tap} / Hold {nc.hold} / Slide {nc.slide}"
+                msg += f"Notes: Tap {nc.tap} / Hold {nc.hold} / Slide {nc.slide}"
                 if nc.touch > 0:
                     msg += f" / Touch {nc.touch}"
                 if nc.break_note > 0:
                     msg += f" / Break {nc.break_note}"
-                msg += f" (总计 {nc.total})\n"
+                msg += f" (Total {nc.total})\n"
         
         if song.alias and len(song.alias) > 0:
             aliases_str = ", ".join(song.alias[:3])
             if len(song.alias) > 3:
                 aliases_str += "..."
-            msg += f"\n💡 别名：{aliases_str}\n"
+            msg += f"\nAlias: {aliases_str}\n"
         
-        msg += f"\n📈 共找到 {result.total_available} 首符合条件的歌曲"
+        msg += f"\nFound {result.total_available} matching songs"
         await random_song.finish(msg)
     else:
-        await random_song.finish("没有找到符合条件的歌曲，请尝试调整筛选条件")
+        await random_song.finish("No matching songs found. Try adjusting your criteria.")
 
-search_song = on_command("查歌", aliases={"搜索歌曲"}, priority=5, block=True, rule=check_blacklist)
+search_song = on_command("search", aliases={"find"}, priority=5, block=True, rule=check_blacklist)
 
 @search_song.handle()
 async def handle_search_song(bot: Bot, event: GroupMessageEvent, args: Message = CommandArg()):
     keyword = args.extract_plain_text().strip()
     
     if not keyword:
-        await search_song.finish("请输入要搜索的歌曲名称或别名")
+        await search_song.finish("Please enter a song name or alias to search")
     
     all_songs = song_manager.get_all_songs()
     results = []
@@ -148,21 +148,21 @@ async def handle_search_song(bot: Bot, event: GroupMessageEvent, args: Message =
             results.append(song)
     
     if not results:
-        await search_song.finish(f"没有找到包含 \"{keyword}\" 的歌曲")
+        await search_song.finish(f"No songs found containing \"{keyword}\"")
     
     if len(results) == 1:
         song = results[0]
-        msg = f"🔍 查歌结果\n\n"
-        msg += f"📌 {song.title}\n"
-        msg += f"👤 {song.artist}\n"
+        msg = f"Search Result\n\n"
+        msg += f"Title: {song.title}\n"
+        msg += f"Artist: {song.artist}\n"
         
         if song.genre:
-            msg += f"🎭 流派：{song.genre}\n"
+            msg += f"Genre: {song.genre}\n"
         
-        msg += f" BPM：{song.bpm}\n"
-        msg += f"💿 类型：{TYPE_NAMES.get(song.type, song.type.value)}\n"
+        msg += f"BPM: {song.bpm}\n"
+        msg += f"Type: {TYPE_NAMES.get(song.type, song.type.value)}\n"
         
-        msg += f"\n📊 难度列表：\n"
+        msg += f"\nDifficulty List:\n"
         
         chart_groups = {}
         for chart in song.charts:
@@ -183,20 +183,20 @@ async def handle_search_song(bot: Bot, event: GroupMessageEvent, args: Message =
                     msg += f"  {diff_str}: {level_display}\n"
         
         if song.alias and len(song.alias) > 0:
-            msg += f"\n💡 别名：{', '.join(song.alias)}\n"
+            msg += f"\nAlias: {', '.join(song.alias)}\n"
         
         await search_song.finish(msg.strip())
     else:
-        msg = f"🔍 找到 {len(results)} 首相关歌曲：\n\n"
+        msg = f"Found {len(results)} related songs:\n\n"
         for i, song in enumerate(results[:10], 1):
             msg += f"{i}. {song.title} - {song.artist}\n"
         
         if len(results) > 10:
-            msg += f"\n... 还有 {len(results) - 10} 首歌曲"
+            msg += f"\n... and {len(results) - 10} more"
         
         await search_song.finish(msg.strip())
 
-level_list = on_command("定数表", aliases={"等级表"}, priority=5, block=True, rule=check_blacklist)
+level_list = on_command("level", aliases={"lv"}, priority=5, block=True, rule=check_blacklist)
 
 @level_list.handle()
 async def handle_level_list(bot: Bot, event: GroupMessageEvent, args: Message = CommandArg()):
@@ -222,7 +222,7 @@ async def handle_level_list(bot: Bot, event: GroupMessageEvent, args: Message = 
                 pass
     
     if target_level is None:
-        await level_list.finish("请指定要查询的定数，例如：定数表 14.5")
+        await level_list.finish("Please specify a level, e.g.: level 14.5")
     
     all_songs = song_manager.get_all_songs()
     results = []
@@ -234,48 +234,48 @@ async def handle_level_list(bot: Bot, event: GroupMessageEvent, args: Message = 
                     results.append((song, chart))
     
     if not results:
-        await level_list.finish(f"没有找到定数为 {target_level} 的{DIFFICULTY_NAMES.get(target_difficulty, '')}谱面")
+        await level_list.finish(f"No {DIFFICULTY_NAMES.get(target_difficulty, '')} charts found with level {target_level}")
     
     results.sort(key=lambda x: x[0].title)
     
     diff_str = DIFFICULTY_NAMES.get(target_difficulty, target_difficulty.value)
-    msg = f"📊 定数 {target_level} 的{diff_str}谱面 ({len(results)}首)\n\n"
+    msg = f"Level {target_level} {diff_str} charts ({len(results)} songs)\n\n"
     
     for i, (song, chart) in enumerate(results[:20], 1):
         type_str = "DX" if chart.type == SongType.DX else ""
         msg += f"{i}. {song.title} {type_str}\n"
     
     if len(results) > 20:
-        msg += f"\n... 还有 {len(results) - 20} 首"
+        msg += f"\n... and {len(results) - 20} more"
     
     await level_list.finish(msg.strip())
 
-help_cmd = on_command("帮助", aliases={"help"}, priority=5, block=True, rule=check_blacklist)
+help_cmd = on_command("help", priority=5, block=True, rule=check_blacklist)
 
 @help_cmd.handle()
 async def handle_help():
-    help_text = """🤖 maimai随机选歌机器人
+    help_text = """maimai Random Song Bot
 
-📖 指令列表：
+Commands:
 
-【选歌】
-随机选歌 - 随机选择一首歌曲
-随机选歌 [等级] - 随机选择指定定数的歌曲
-随机选歌 [等级] [难度] - 指定难度选歌
-随机选歌 dx [等级] - 随机选择DX谱面
-随机选歌 utage - 随机选择Utage谱面
+[Song Selection]
+random_song / rs - Random song selection
+random_song [level] - Random song with specified level
+random_song [level] [difficulty] - Specify difficulty
+random_song dx [level] - Random DX chart
+random_song utage - Random Utage chart
 
-难度关键词：
+Difficulty keywords:
 easy/basic/advanced/expert/master/remaster/utage
 
-【查歌】
-查歌 [关键词] - 搜索歌曲信息
+[Search]
+search [keyword] - Search song info
 
-【定数表】
-定数表 [定数] - 查看指定定数的歌曲
-定数表 [定数] [难度] - 查看指定难度的定数表
+[Level List]
+level [level] - View songs at specified level
+level [level] [difficulty] - View level list by difficulty
 
-版本：Alpha-0.0.2
-曲库：1317 首歌曲
+Version: Alpha-0.0.2
+Songs: 1317
 """
     await help_cmd.finish(help_text)
