@@ -163,8 +163,7 @@ class SongSelector:
     
     def select_random(self, criteria: SelectionCriteria) -> SelectionResult:
         filtered = self.filter_songs(criteria)
-        count = min(criteria.count, len(filtered))
-        selected = random.sample(filtered, count) if filtered else []
+        selected = random.choices(filtered, k=criteria.count) if filtered else []
         
         return SelectionResult(
             songs=selected,
