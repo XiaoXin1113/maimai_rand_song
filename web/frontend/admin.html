@@ -106,9 +106,27 @@
         .btn-danger:hover {
             background: #c0392b;
         }
+        .btn-warning {
+            background: #f39c12;
+            color: white;
+        }
+        .btn-warning:hover {
+            background: #d68910;
+        }
+        .btn-secondary {
+            background: #555;
+            color: white;
+        }
+        .btn-secondary:hover {
+            background: #444;
+        }
         .btn-sm {
             padding: 8px 15px;
             font-size: 0.9em;
+        }
+        .btn:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
         }
         .blacklist-table {
             width: 100%;
@@ -186,6 +204,107 @@
             margin-bottom: 10px;
             color: #aaa;
         }
+        .db-stats {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+        .stat-item {
+            background: #1a1a2e;
+            padding: 15px;
+            border-radius: 8px;
+            text-align: center;
+        }
+        .stat-item .value {
+            font-size: 1.8em;
+            color: #667eea;
+            font-weight: bold;
+        }
+        .stat-item .label {
+            color: #888;
+            font-size: 0.9em;
+            margin-top: 5px;
+        }
+        .update-progress {
+            display: none;
+            margin-top: 15px;
+            padding: 15px;
+            background: #1a1a2e;
+            border-radius: 8px;
+        }
+        .update-progress.show {
+            display: block;
+        }
+        .progress-bar {
+            height: 8px;
+            background: #333;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 10px;
+        }
+        .progress-bar .progress {
+            height: 100%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            width: 0%;
+            transition: width 0.3s;
+        }
+        .loading-spinner {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid #fff;
+            border-radius: 50%;
+            border-top-color: transparent;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        .header-actions {
+            display: flex;
+            justify-content: center;
+            gap: 15px;
+            margin-top: 15px;
+        }
+        .user-info {
+            color: #888;
+            font-size: 0.9em;
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.7);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal.show {
+            display: flex;
+        }
+        .modal-content {
+            background: #16213e;
+            border-radius: 10px;
+            padding: 30px;
+            width: 100%;
+            max-width: 400px;
+        }
+        .modal-header {
+            margin-bottom: 20px;
+        }
+        .modal-header h3 {
+            color: #667eea;
+        }
+        .modal-footer {
+            margin-top: 20px;
+            display: flex;
+            gap: 10px;
+            justify-content: flex-end;
+        }
     </style>
 </head>
 <body>
@@ -196,6 +315,11 @@
             <div class="nav-links">
                 <a href="/">🏠 前台首页</a>
                 <a href="/admin">⚙️ 管理面板</a>
+            </div>
+            <div class="header-actions">
+                <span class="user-info" id="userInfo"></span>
+                <button class="btn btn-secondary btn-sm" onclick="showChangePasswordModal()">修改密码</button>
+                <button class="btn btn-danger btn-sm" onclick="logout()">退出登录</button>
             </div>
         </header>
 
@@ -209,6 +333,43 @@
                 <div class="service-card">
                     <h3>Web API</h3>
                     <span class="status-badge status-online" id="webStatus">检测中...</span>
+                </div>
+            </div>
+        </div>
+
+        <div class="panel">
+            <h2>🗄️ 歌曲数据库</h2>
+            <div class="db-stats" id="dbStats">
+                <div class="stat-item">
+                    <div class="value" id="totalSongs">-</div>
+                    <div class="label">歌曲总数</div>
+                </div>
+                <div class="stat-item">
+                    <div class="value" id="totalCharts">-</div>
+                    <div class="label">谱面总数</div>
+                </div>
+                <div class="stat-item">
+                    <div class="value" id="lastUpdated">-</div>
+                    <div class="label">最后更新</div>
+                </div>
+            </div>
+            
+            <div style="margin-top: 15px;">
+                <button class="btn btn-warning" id="updateDbBtn" onclick="updateDatabase()">
+                    🔄 手动更新数据库
+                </button>
+                <span style="color: #888; margin-left: 10px; font-size: 0.9em;">
+                    自动更新：每天 00:00 (UTC+8)
+                </span>
+            </div>
+            
+            <div class="update-progress" id="updateProgress">
+                <div style="display: flex; align-items: center; gap: 10px;">
+                    <span class="loading-spinner"></span>
+                    <span id="updateStatus">正在更新数据库...</span>
+                </div>
+                <div class="progress-bar">
+                    <div class="progress" id="progressBar"></div>
                 </div>
             </div>
         </div>
@@ -250,6 +411,32 @@
         </div>
     </div>
 
+    <div class="modal" id="changePasswordModal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3>🔐 修改密码</h3>
+            </div>
+            <form id="changePasswordForm">
+                <div class="form-group">
+                    <label>原密码</label>
+                    <input type="password" id="oldPassword" placeholder="请输入原密码" required>
+                </div>
+                <div class="form-group">
+                    <label>新密码</label>
+                    <input type="password" id="newPassword" placeholder="请输入新密码" required>
+                </div>
+                <div class="form-group">
+                    <label>确认新密码</label>
+                    <input type="password" id="confirmPassword" placeholder="请再次输入新密码" required>
+                </div>
+            </form>
+            <div class="modal-footer">
+                <button class="btn btn-secondary" onclick="hideChangePasswordModal()">取消</button>
+                <button class="btn btn-primary" onclick="changePassword()">确认修改</button>
+            </div>
+        </div>
+    </div>
+
     <div class="toast" id="toast"></div>
 
     <script>
@@ -267,6 +454,10 @@
         async function fetchAPI(endpoint, options = {}) {
             try {
                 const response = await fetch(`${API_BASE}${endpoint}`, options);
+                if (response.status === 401) {
+                    window.location.href = '/login';
+                    return;
+                }
                 if (!response.ok) {
                     const error = await response.json();
                     throw new Error(error.detail || '请求失败');
@@ -274,6 +465,67 @@
                 return await response.json();
             } catch (error) {
                 throw error;
+            }
+        }
+
+        async function checkAuth() {
+            try {
+                const data = await fetchAPI('/check-auth');
+                if (!data.authenticated) {
+                    window.location.href = '/login';
+                    return false;
+                }
+                document.getElementById('userInfo').textContent = `当前用户: ${data.username}`;
+                return true;
+            } catch (error) {
+                window.location.href = '/login';
+                return false;
+            }
+        }
+
+        async function logout() {
+            try {
+                await fetchAPI('/logout', { method: 'POST' });
+                window.location.href = '/login';
+            } catch (error) {
+                showToast('退出登录失败', 'error');
+            }
+        }
+
+        function showChangePasswordModal() {
+            document.getElementById('changePasswordModal').classList.add('show');
+        }
+
+        function hideChangePasswordModal() {
+            document.getElementById('changePasswordModal').classList.remove('show');
+            document.getElementById('changePasswordForm').reset();
+        }
+
+        async function changePassword() {
+            const oldPassword = document.getElementById('oldPassword').value;
+            const newPassword = document.getElementById('newPassword').value;
+            const confirmPassword = document.getElementById('confirmPassword').value;
+            
+            if (!oldPassword || !newPassword || !confirmPassword) {
+                showToast('请填写所有字段', 'error');
+                return;
+            }
+            
+            if (newPassword !== confirmPassword) {
+                showToast('两次输入的新密码不一致', 'error');
+                return;
+            }
+            
+            try {
+                await fetchAPI('/change-password', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ old_password: oldPassword, new_password: newPassword })
+                });
+                showToast('密码修改成功', 'success');
+                hideChangePasswordModal();
+            } catch (error) {
+                showToast('密码修改失败: ' + error.message, 'error');
             }
         }
 
@@ -299,6 +551,56 @@
             } catch {
                 document.getElementById('botStatus').textContent = '离线';
                 document.getElementById('botStatus').className = 'status-badge status-offline';
+            }
+        }
+
+        async function loadDbStats() {
+            try {
+                const data = await fetchAPI('/database/stats');
+                document.getElementById('totalSongs').textContent = data.total_songs || 0;
+                document.getElementById('totalCharts').textContent = data.total_charts || 0;
+                document.getElementById('lastUpdated').textContent = data.last_updated || '-';
+            } catch (error) {
+                console.error('Failed to load database stats:', error);
+            }
+        }
+
+        async function updateDatabase() {
+            const btn = document.getElementById('updateDbBtn');
+            const progress = document.getElementById('updateProgress');
+            const progressBar = document.getElementById('progressBar');
+            const updateStatus = document.getElementById('updateStatus');
+            
+            btn.disabled = true;
+            progress.classList.add('show');
+            progressBar.style.width = '10%';
+            updateStatus.textContent = '正在从远程服务器下载数据...';
+            
+            try {
+                progressBar.style.width = '30%';
+                updateStatus.textContent = '正在解析数据...';
+                
+                const result = await fetchAPI('/database/update', { method: 'POST' });
+                
+                progressBar.style.width = '100%';
+                updateStatus.textContent = '更新完成！';
+                
+                showToast(`数据库更新成功！共 ${result.total_songs} 首歌曲`, 'success');
+                
+                setTimeout(() => {
+                    progress.classList.remove('show');
+                    loadDbStats();
+                }, 2000);
+            } catch (error) {
+                updateStatus.textContent = '更新失败: ' + error.message;
+                progressBar.style.width = '0%';
+                showToast('数据库更新失败: ' + error.message, 'error');
+                
+                setTimeout(() => {
+                    progress.classList.remove('show');
+                }, 3000);
+            } finally {
+                btn.disabled = false;
             }
         }
 
@@ -374,8 +676,12 @@
             }
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
+        document.addEventListener('DOMContentLoaded', async () => {
+            const isAuth = await checkAuth();
+            if (!isAuth) return;
+            
             checkServices();
+            loadDbStats();
             loadBlacklist();
             document.getElementById('addBlacklistForm').addEventListener('submit', addBlacklist);
         });

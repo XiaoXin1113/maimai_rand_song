@@ -1,0 +1,191 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>maimai选歌 - 管理员登录</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%);
+            min-height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: #eee;
+        }
+        .login-container {
+            background: #16213e;
+            border-radius: 15px;
+            padding: 40px;
+            width: 100%;
+            max-width: 400px;
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .login-header h1 {
+            color: #667eea;
+            margin-bottom: 10px;
+        }
+        .login-header p {
+            color: #888;
+            font-size: 0.9em;
+        }
+        .form-group {
+            margin-bottom: 20px;
+        }
+        .form-group label {
+            display: block;
+            margin-bottom: 8px;
+            color: #aaa;
+            font-size: 0.9em;
+        }
+        .form-group input {
+            width: 100%;
+            padding: 14px;
+            border: 1px solid #333;
+            border-radius: 8px;
+            background: #1a1a2e;
+            color: #eee;
+            font-size: 1em;
+            transition: border-color 0.3s;
+        }
+        .form-group input:focus {
+            outline: none;
+            border-color: #667eea;
+        }
+        .btn {
+            width: 100%;
+            padding: 14px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 1em;
+            font-weight: 600;
+            transition: all 0.3s;
+        }
+        .btn-primary {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+        }
+        .btn-primary:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 20px rgba(102, 126, 234, 0.4);
+        }
+        .btn-primary:disabled {
+            opacity: 0.6;
+            cursor: not-allowed;
+            transform: none;
+        }
+        .error-message {
+            background: #e74c3c;
+            color: white;
+            padding: 12px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            display: none;
+            font-size: 0.9em;
+        }
+        .error-message.show {
+            display: block;
+        }
+        .nav-links {
+            text-align: center;
+            margin-top: 20px;
+        }
+        .nav-links a {
+            color: #667eea;
+            text-decoration: none;
+        }
+        .nav-links a:hover {
+            text-decoration: underline;
+        }
+    </style>
+</head>
+<body>
+    <div class="login-container">
+        <div class="login-header">
+            <h1>🔐 管理员登录</h1>
+            <p>请输入您的凭据以访问管理面板</p>
+        </div>
+        
+        <div class="error-message" id="errorMessage"></div>
+        
+        <form id="loginForm">
+            <div class="form-group">
+                <label for="username">用户名</label>
+                <input type="text" id="username" placeholder="请输入用户名" required autocomplete="username">
+            </div>
+            <div class="form-group">
+                <label for="password">密码</label>
+                <input type="password" id="password" placeholder="请输入密码" required autocomplete="current-password">
+            </div>
+            <button type="submit" class="btn btn-primary" id="loginBtn">登 录</button>
+        </form>
+        
+        <div class="nav-links">
+            <a href="/">← 返回首页</a>
+        </div>
+    </div>
+
+    <script>
+        async function checkAuth() {
+            try {
+                const response = await fetch('/api/check-auth');
+                const data = await response.json();
+                if (data.authenticated) {
+                    window.location.href = '/admin';
+                }
+            } catch (error) {
+                console.error('Auth check failed:', error);
+            }
+        }
+
+        async function login(event) {
+            event.preventDefault();
+            
+            const username = document.getElementById('username').value;
+            const password = document.getElementById('password').value;
+            const loginBtn = document.getElementById('loginBtn');
+            const errorMessage = document.getElementById('errorMessage');
+            
+            loginBtn.disabled = true;
+            loginBtn.textContent = '登录中...';
+            errorMessage.classList.remove('show');
+            
+            try {
+                const response = await fetch('/api/login', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ username, password })
+                });
+                
+                if (!response.ok) {
+                    const error = await response.json();
+                    throw new Error(error.detail || '登录失败');
+                }
+                
+                window.location.href = '/admin';
+            } catch (error) {
+                errorMessage.textContent = error.message;
+                errorMessage.classList.add('show');
+                loginBtn.disabled = false;
+                loginBtn.textContent = '登 录';
+            }
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            checkAuth();
+            document.getElementById('loginForm').addEventListener('submit', login);
+        });
+    </script>
+</body>
+</html>
