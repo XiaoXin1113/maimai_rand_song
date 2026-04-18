@@ -13,7 +13,7 @@ function createWindow() {
             contextIsolation: false
         },
         icon: path.join(__dirname, 'assets/icon.png'),
-        title: 'maimai随机选歌工具 - Alpha-0.0.1'
+        title: 'maimai随机选歌工具 - Alpha-0.0.2'
     });
 
     mainWindow.loadFile('index.html');

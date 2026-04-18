@@ -2,7 +2,7 @@
 
 一个多平台的maimai随机选歌工具，支持QQ机器人、Web网页、Windows桌面应用和Android移动应用。
 
-**当前版本：Alpha-0.0.1**
+**当前版本：Alpha-0.0.2**
 
 ## 📁 项目结构
 
@@ -145,7 +145,7 @@ SONGS_DATA_PATH=data/songs.json
 
 ## 📝 版本历史
 
-### Alpha-0.0.1 (当前版本)
+### Alpha-0.0.2 (当前版本)
 - 🎉 项目初始化
 - ✨ 完成基础框架搭建
 - ✨ 实现核心选歌逻辑
@@ -153,6 +153,8 @@ SONGS_DATA_PATH=data/songs.json
 - ✨ Web界面基础功能
 - ✨ Windows应用基础功能
 - ✨ Android应用基础功能
+- ✨ 群聊黑名单管理功能
+- ✨ 后台管理面板
 
 ## 🤝 贡献指南
 

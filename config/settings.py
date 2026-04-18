@@ -4,7 +4,7 @@ from pydantic_settings import BaseSettings
 from typing import Optional
 
 class Settings(BaseSettings):
-    VERSION: str = "Alpha-0.0.1"
+    VERSION: str = "Alpha-0.0.2"
     APP_NAME: str = "maimai随机选歌工具"
     
     # QQ机器人配置

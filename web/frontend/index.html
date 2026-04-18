@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>maimai随机选歌工具</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🎵 maimai随机选歌工具</h1>
+            <p class="version">版本：Alpha-0.0.2</p>
+        </header>
+
+        <main>
+            <section class="selection-panel">
+                <h2>选歌条件设置</h2>
+                <form id="selectionForm">
+                    <div class="form-group">
+                        <label for="difficulty">难度：</label>
+                        <select id="difficulty">
+                            <option value="">全部</option>
+                            <option value="Easy">Easy</option>
+                            <option value="Basic">Basic</option>
+                            <option value="Advanced">Advanced</option>
+                            <option value="Expert">Expert</option>
+                            <option value="Master">Master</option>
+                            <option value="Re:Master">Re:Master</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="minLevel">最低等级：</label>
+                        <input type="number" id="minLevel" min="1" max="15" step="0.5" placeholder="1.0">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="maxLevel">最高等级：</label>
+                        <input type="number" id="maxLevel" min="1" max="15" step="0.5" placeholder="15.0">
+                    </div>
+
+                    <div class="form-group">
+                        <label for="songType">歌曲类型：</label>
+                        <select id="songType">
+                            <option value="">全部</option>
+                            <option value="标准">标准</option>
+                            <option value="DX">DX</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="genre">流派：</label>
+                        <select id="genre">
+                            <option value="">全部</option>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="count">选择数量：</label>
+                        <input type="number" id="count" min="1" max="10" value="1">
+                    </div>
+
+                    <button type="submit" class="btn-primary">🎲 随机选歌</button>
+                </form>
+            </section>
+
+            <section class="result-panel">
+                <h2>选歌结果</h2>
+                <div id="resultContainer">
+                    <p class="placeholder">请设置条件后点击"随机选歌"</p>
+                </div>
+            </section>
+
+            <section class="song-list-panel">
+                <h2>歌曲列表</h2>
+                <div id="songListContainer">
+                    <p class="loading">加载中...</p>
+                </div>
+            </section>
+        </main>
+
+        <footer>
+            <p>© 2024 maimai随机选歌工具 | Alpha-0.0.2</p>
+        </footer>
+    </div>
+
+    <script src="/static/js/app.js"></script>
+</body>
+</html>

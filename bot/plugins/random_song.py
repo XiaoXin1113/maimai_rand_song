@@ -61,6 +61,6 @@ async def handle_help():
 @我 随机选歌 [等级] - 随机选择指定等级的歌曲
 @我 帮助 - 显示此帮助信息
 
-版本：Alpha-0.0.1
+版本：Alpha-0.0.2
 """
     await help_cmd.finish(help_text)

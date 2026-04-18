@@ -19,5 +19,5 @@ flutter build apk
 ```
 
 ## 版本信息
-- 版本：Alpha-0.0.1
+- 版本：Alpha-0.0.2
 - 框架：Flutter

@@ -15,7 +15,7 @@ from core.group_blacklist import group_blacklist, BlacklistEntry
 app = FastAPI(
     title="maimai随机选歌工具",
     description="Web API for maimai random song selector",
-    version="Alpha-0.0.1"
+    version="Alpha-0.0.2"
 )
 
 app.add_middleware(
@@ -64,7 +64,7 @@ async def get_bot_status():
 
 @app.get("/api/version")
 async def get_version():
-    return {"version": "Alpha-0.0.1"}
+    return {"version": "Alpha-0.0.2"}
 
 @app.get("/api/songs")
 async def get_songs():
