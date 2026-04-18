@@ -117,7 +117,10 @@ function displayResults(result) {
             let chartsHtml = '';
             for (const [type, charts] of Object.entries(chartsByType)) {
                 chartsHtml += `<div style="margin-top: 5px;"><strong>${type}:</strong> `;
-                chartsHtml += charts.map(c => `${c.difficulty} ${c.level}`).join(' | ');
+                chartsHtml += charts.map(c => {
+                    const levelDisplay = c.internal_level ? `${c.level} (${c.internal_level})` : c.level;
+                    return `${c.difficulty} ${levelDisplay}`;
+                }).join(' | ');
                 chartsHtml += '</div>';
             }
             
