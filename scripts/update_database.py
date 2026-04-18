@@ -171,20 +171,28 @@ def merge_data(data: dict) -> list[Song]:
     tags_map = build_tags_map(tags_data)
     
     songs_dict = {}
+    used_ids = set()
     
     for song in dxdata:
-        song_id = song.get("internalId") or song.get("songId")
+        sheets = song.get("sheets", [])
+        if not sheets:
+            continue
+        
+        song_id = None
+        for sheet in sheets:
+            if sheet.get("internalId") is not None:
+                song_id = sheet["internalId"]
+                break
+        
         if song_id is None:
             continue
-        if isinstance(song_id, str):
-            try:
-                song_id = int(song_id)
-            except ValueError:
-                continue
+        
+        if song_id in used_ids:
+            continue
         
         title = song.get("title", "")
         
-        charts = parse_dxdata_sheets(song.get("sheets", []))
+        charts = parse_dxdata_sheets(sheets)
         
         song_obj = Song(
             id=song_id,
@@ -202,6 +210,7 @@ def merge_data(data: dict) -> list[Song]:
         
         key = f"{title}_{song.get('artist', '')}"
         songs_dict[key] = song_obj
+        used_ids.add(song_id)
     
     for song in becods_songs:
         song_id = song.get("id")
