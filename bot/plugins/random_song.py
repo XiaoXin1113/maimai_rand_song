@@ -9,7 +9,7 @@ from nonebot.params import CommandArg
 from core import SongManager, SongSelector, SelectionCriteria, Difficulty, SongType, parse_level_input
 from core.group_blacklist import group_blacklist
 
-COVER_BASE_URL = "https://raw.githubusercontent.com/realtvop/maimai_music_metadata/main/covers"
+COVER_BASE_URL = "https://maimai.zetaraku.dev/images/jackets"
 
 def get_cover_url(song_id: int) -> str:
     return f"{COVER_BASE_URL}/{song_id:06d}.png"
