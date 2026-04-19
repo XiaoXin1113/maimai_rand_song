@@ -27,6 +27,29 @@ DIFFICULTY_NAMES = {
     4: "Re:Master"
 }
 
+def find_song_by_keyword(keyword: str):
+    keyword_lower = keyword.lower().strip()
+    
+    if keyword_lower.isdigit():
+        song_id = int(keyword_lower)
+        for song in song_manager.get_all_songs():
+            if song.id == song_id:
+                return song, song.title
+        return None, None
+    
+    for song in song_manager.get_all_songs():
+        if keyword_lower == song.title.lower():
+            return song, song.title
+        if keyword_lower in song.title.lower():
+            return song, song.title
+        for alias in song.alias:
+            if keyword_lower == alias.lower():
+                return song, song.title
+            if keyword_lower in alias.lower():
+                return song, song.title
+    
+    return None, None
+
 async def check_blacklist(event: Event) -> bool:
     if isinstance(event, GroupMessageEvent):
         return not group_blacklist.is_blocked(event.group_id)
@@ -126,12 +149,21 @@ async def handle_check_score(event: Event, args: Message = CommandArg()):
         elif part_lower in ["dx", "std"]:
             target_type = "DX" if part_lower == "dx" else "SD"
     
-    song_title = keyword
+    song_keyword = keyword
     for part in parts:
         part_lower = part.lower()
         if part_lower in ["basic", "bs", "b", "advanced", "adv", "a", "expert", "exp", "e", 
                           "master", "mas", "m", "remaster", "rem", "r", "dx", "std"]:
-            song_title = song_title.replace(part, "").strip()
+            song_keyword = song_keyword.replace(part, "").strip()
+    
+    song, song_title = find_song_by_keyword(song_keyword)
+    if not song:
+        await check_score.finish(f"未找到歌曲 \"{song_keyword}\"")
+    
+    if song.type == SongType.DX:
+        target_type = "DX"
+    else:
+        target_type = "SD"
     
     score = await client.get_song_score_by_name(
         user_token.diving_fish_username,

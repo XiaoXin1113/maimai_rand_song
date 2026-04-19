@@ -6,8 +6,9 @@ from nonebot import on_command, on_message
 from nonebot.rule import to_me
 from nonebot.adapters.onebot.v11 import Bot, GroupMessageEvent, Message, Event, MessageSegment
 from nonebot.params import CommandArg
-from core import SongManager, SongSelector, SelectionCriteria, Difficulty, SongType, parse_level_input
+from core import SongManager, SongSelector, SelectionCriteria, Difficulty, SongType, parse_level_input, get_diving_fish_client
 from core.group_blacklist import group_blacklist
+from core.user_tokens import user_token_manager
 
 COVER_BASE_URL = "https://shama.dxrating.net/images/cover/v2"
 
@@ -137,6 +138,38 @@ async def handle_random_song(bot: Bot, event: GroupMessageEvent, args: Message =
             msg += f"\nAlias: {aliases_str}\n"
         
         msg += f"\nFound {result.total_available} matching songs"
+        
+        user_token = user_token_manager.get_token(event.user_id)
+        if user_token:
+            client = get_diving_fish_client()
+            if client:
+                try:
+                    song_type = "DX" if song.type == SongType.DX else "SD"
+                    diff_name = DIFFICULTY_NAMES.get(target_difficulty, "Master").lower()
+                    score = await client.get_song_score_by_name(
+                        user_token.diving_fish_username,
+                        song.title,
+                        diff_name,
+                        song_type,
+                        user_token.import_token
+                    )
+                    if score:
+                        msg += f"\n\n--- Your Score ---"
+                        msg += f"\n达成率: {score.achievement:.4f}%"
+                        msg += f"\nDX Score: {score.dx_score}/{score.dx_score_max}"
+                        if score.fc:
+                            fc_names = {"fc": "FC", "fcplus": "FC+", "ap": "AP", "applus": "AP+"}
+                            msg += f" | {fc_names.get(score.fc.lower(), score.fc)}"
+                        if score.fs:
+                            fs_names = {"fs": "FS", "fsplus": "FS+", "fsd": "FSD", "fsdplus": "FSD+"}
+                            msg += f" | {fs_names.get(score.fs.lower(), score.fs)}"
+                        if score.rate:
+                            rate_names = {"d": "D", "c": "C", "b": "B", "bb": "BB", "bbb": "BBB", 
+                                          "a": "A", "aa": "AA", "aaa": "AAA", "s": "S", "sp": "S+", 
+                                          "ss": "SS", "ssp": "SS+", "sss": "SSS", "sssp": "SSS+"}
+                            msg += f"\n评价: {rate_names.get(score.rate.lower(), score.rate)}"
+                except Exception:
+                    pass
         
         try:
             if song.image_url:
