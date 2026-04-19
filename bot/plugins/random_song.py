@@ -129,14 +129,14 @@ async def handle_random_song(bot: Bot, event: GroupMessageEvent, args: Message =
         
         msg += f"\nFound {result.total_available} matching songs"
         
-        await random_song.send(msg)
-        
         try:
             if song.image_url:
                 cover_url = get_cover_url(song.image_url)
-                await random_song.send(MessageSegment.image(cover_url))
+                await random_song.send(Message(msg + MessageSegment.image(cover_url)))
+            else:
+                await random_song.send(msg)
         except Exception:
-            pass
+            await random_song.send(msg)
     else:
         await random_song.finish("No matching songs found. Try adjusting your criteria.")
 
@@ -196,14 +196,14 @@ async def handle_search_song(bot: Bot, event: GroupMessageEvent, args: Message =
         if song.alias and len(song.alias) > 0:
             msg += f"\nAlias: {', '.join(song.alias)}\n"
         
-        await search_song.send(msg.strip())
-        
         try:
             if song.image_url:
                 cover_url = get_cover_url(song.image_url)
-                await search_song.send(MessageSegment.image(cover_url))
+                await search_song.send(Message(msg.strip() + MessageSegment.image(cover_url)))
+            else:
+                await search_song.send(msg.strip())
         except Exception:
-            pass
+            await search_song.send(msg.strip())
     else:
         msg = f"Found {len(results)} related songs:\n\n"
         for i, song in enumerate(results[:10], 1):
