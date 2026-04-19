@@ -1,6 +1,7 @@
 from .models import Song, Difficulty, SongType, SelectionCriteria, SelectionResult, Chart, NoteCounts, Regions, DatabaseMetadata
 from .song_manager import SongManager, SongSelector, song_manager, song_selector
 from .group_blacklist import GroupBlacklist, BlacklistEntry, group_blacklist
+from .diving_fish import DivingFishClient, PlayerScore, PlayerInfo, init_diving_fish_client, get_diving_fish_client
 
 def parse_level_input(level_str: str) -> tuple:
     """
@@ -59,4 +60,9 @@ __all__ = [
     "BlacklistEntry",
     "group_blacklist",
     "parse_level_input",
+    "DivingFishClient",
+    "PlayerScore",
+    "PlayerInfo",
+    "init_diving_fish_client",
+    "get_diving_fish_client",
 ]
