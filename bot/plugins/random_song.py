@@ -92,6 +92,15 @@ async def handle_random_song(bot: Bot, event: GroupMessageEvent, args: Message =
         
         msg += f"BPM: {song.bpm}\n"
         
+        first_version = song.version
+        if not first_version and song.charts:
+            versions = [c.version for c in song.charts if c.version]
+            if versions:
+                first_version = versions[0]
+        
+        if first_version:
+            msg += f"Version: {first_version}\n"
+        
         matching_charts = []
         for chart in song.charts:
             if target_type and chart.type != target_type:
@@ -172,6 +181,15 @@ async def handle_search_song(bot: Bot, event: GroupMessageEvent, args: Message =
         
         msg += f"BPM: {song.bpm}\n"
         msg += f"Type: {TYPE_NAMES.get(song.type, song.type.value)}\n"
+        
+        first_version = song.version
+        if not first_version and song.charts:
+            versions = [c.version for c in song.charts if c.version]
+            if versions:
+                first_version = versions[0]
+        
+        if first_version:
+            msg += f"Version: {first_version}\n"
         
         msg += f"\nDifficulty List:\n"
         
