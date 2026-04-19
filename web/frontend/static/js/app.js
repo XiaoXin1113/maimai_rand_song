@@ -1,7 +1,8 @@
 const API_BASE = '/api';
+const COVER_BASE_URL = 'https://shama.dxrating.net/images/cover/v2';
 
-function getCoverUrl(songId) {
-    return `${API_BASE}/cover/${songId}`;
+function getCoverUrl(imageName) {
+    return `${COVER_BASE_URL}/${imageName}.jpg`;
 }
 
 async function fetchAPI(endpoint, options = {}) {
@@ -128,8 +129,7 @@ function displayResults(result) {
                 chartsHtml += '</div>';
             }
             
-            const songId = parseInt(song.id, 10);
-            const coverUrl = getCoverUrl(songId);
+            const coverUrl = song.image_url ? getCoverUrl(song.image_url) : '';
             
             return `
             <div class="result-card" style="display: flex; gap: 15px;">

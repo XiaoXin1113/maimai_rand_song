@@ -9,10 +9,10 @@ from nonebot.params import CommandArg
 from core import SongManager, SongSelector, SelectionCriteria, Difficulty, SongType, parse_level_input
 from core.group_blacklist import group_blacklist
 
-COVER_BASE_URL = "http://127.0.0.1:8000/api/cover"
+COVER_BASE_URL = "https://shama.dxrating.net/images/cover/v2"
 
-def get_cover_url(song_id: int) -> str:
-    return f"{COVER_BASE_URL}/{song_id}"
+def get_cover_url(image_name: str) -> str:
+    return f"{COVER_BASE_URL}/{image_name}.jpg"
 
 song_manager = SongManager()
 song_selector = SongSelector(song_manager)
@@ -132,8 +132,9 @@ async def handle_random_song(bot: Bot, event: GroupMessageEvent, args: Message =
         await random_song.send(msg)
         
         try:
-            cover_url = get_cover_url(song.id)
-            await random_song.send(MessageSegment.image(cover_url))
+            if song.image_url:
+                cover_url = get_cover_url(song.image_url)
+                await random_song.send(MessageSegment.image(cover_url))
         except Exception:
             pass
     else:
@@ -198,8 +199,9 @@ async def handle_search_song(bot: Bot, event: GroupMessageEvent, args: Message =
         await search_song.send(msg.strip())
         
         try:
-            cover_url = get_cover_url(song.id)
-            await search_song.send(MessageSegment.image(cover_url))
+            if song.image_url:
+                cover_url = get_cover_url(song.image_url)
+                await search_song.send(MessageSegment.image(cover_url))
         except Exception:
             pass
     else:
