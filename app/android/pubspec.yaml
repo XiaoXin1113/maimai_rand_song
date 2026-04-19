@@ -1,6 +1,6 @@
 name: maimai_rand_song
 description: maimai随机选歌工具 - Android版
-version: 0.0.1+1
+version: 0.0.3+1
 
 environment:
   sdk: '>=3.0.0 <4.0.0'
@@ -9,8 +9,6 @@ dependencies:
   flutter:
     sdk: flutter
   cupertino_icons: ^1.0.2
-  http: ^1.1.0
-  shared_preferences: ^2.2.0
 
 dev_dependencies:
   flutter_test:
@@ -21,9 +19,4 @@ flutter:
   uses-material-design: true
   
   assets:
-    - assets/
-
-  fonts:
-    - family: CustomIcons
-      fonts:
-        - asset: assets/fonts/CustomIcons.ttf
+    - assets/data/
