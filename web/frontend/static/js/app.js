@@ -1,8 +1,7 @@
 const API_BASE = '/api';
-const COVER_BASE_URL = 'https://raw.githubusercontent.com/realtvop/maimai_music_metadata/main/covers';
 
 function getCoverUrl(songId) {
-    return `${COVER_BASE_URL}/${String(songId).padStart(6, '0')}.png`;
+    return `${API_BASE}/cover/${songId}`;
 }
 
 async function fetchAPI(endpoint, options = {}) {

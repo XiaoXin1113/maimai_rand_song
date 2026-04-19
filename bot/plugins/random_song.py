@@ -9,10 +9,10 @@ from nonebot.params import CommandArg
 from core import SongManager, SongSelector, SelectionCriteria, Difficulty, SongType, parse_level_input
 from core.group_blacklist import group_blacklist
 
-COVER_BASE_URL = "https://maimai.zetaraku.dev/images/jackets"
+COVER_BASE_URL = "http://127.0.0.1:8000/api/cover"
 
 def get_cover_url(song_id: int) -> str:
-    return f"{COVER_BASE_URL}/{song_id:06d}.png"
+    return f"{COVER_BASE_URL}/{song_id}"
 
 song_manager = SongManager()
 song_selector = SongSelector(song_manager)

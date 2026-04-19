@@ -9,6 +9,7 @@ import json
 import asyncio
 import secrets
 import hashlib
+import httpx
 from pathlib import Path
 from datetime import datetime, timedelta
 
@@ -16,6 +17,33 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from core import SongManager, SongSelector, SelectionCriteria, Difficulty, SongType, Song
 from core.group_blacklist import group_blacklist, BlacklistEntry
+
+COVER_CACHE_DIR = Path(__file__).parent.parent.parent / "data" / "covers"
+COVER_CACHE_DIR.mkdir(parents=True, exist_ok=True)
+
+COVER_SOURCES = [
+    "https://raw.githubusercontent.com/realtvop/maimai_music_metadata/main/covers",
+]
+
+async def fetch_cover(song_id: int) -> Optional[bytes]:
+    cover_filename = f"{song_id:06d}.png"
+    cache_path = COVER_CACHE_DIR / cover_filename
+    
+    if cache_path.exists():
+        return cache_path.read_bytes()
+    
+    async with httpx.AsyncClient(timeout=10) as client:
+        for source in COVER_SOURCES:
+            try:
+                url = f"{source}/{cover_filename}"
+                response = await client.get(url)
+                if response.status_code == 200:
+                    cache_path.write_bytes(response.content)
+                    return response.content
+            except Exception:
+                continue
+    
+    return None
 
 app = FastAPI(
     title="maimai随机选歌工具",
@@ -193,6 +221,13 @@ async def get_bot_status():
 @app.get("/api/version")
 async def get_version():
     return {"version": "Alpha-0.0.2"}
+
+@app.get("/api/cover/{song_id}")
+async def get_cover(song_id: int):
+    cover_data = await fetch_cover(song_id)
+    if cover_data:
+        return Response(content=cover_data, media_type="image/png")
+    raise HTTPException(status_code=404, detail="Cover not found")
 
 @app.get("/api/songs")
 async def get_songs():
