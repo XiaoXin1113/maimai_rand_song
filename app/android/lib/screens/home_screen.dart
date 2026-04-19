@@ -167,7 +167,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       hintText: '如: 14, 14+, 14.5',
                       border: OutlineInputBorder(),
                     ),
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
                   ),
                 ),
                 const SizedBox(width: 16),
@@ -179,7 +180,8 @@ class _HomeScreenState extends State<HomeScreen> {
                       hintText: '如: 14, 14+, 14.5',
                       border: OutlineInputBorder(),
                     ),
-                    keyboardType: const TextInputType.numberWithOptions(decimal: true),
+                    keyboardType:
+                        const TextInputType.numberWithOptions(decimal: true),
                   ),
                 ),
               ],
@@ -356,43 +358,80 @@ class _HomeScreenState extends State<HomeScreen> {
         color: Theme.of(context).colorScheme.surfaceContainerHighest,
         borderRadius: BorderRadius.circular(8),
       ),
-      child: Column(
+      child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Text(
-            '【$index】${song.title}',
-            style: Theme.of(context).textTheme.titleMedium?.copyWith(
-                  color: Theme.of(context).colorScheme.primary,
-                  fontWeight: FontWeight.bold,
+          ClipRRect(
+            borderRadius: BorderRadius.circular(8),
+            child: Image.network(
+              song.coverUrl,
+              width: 100,
+              height: 100,
+              fit: BoxFit.cover,
+              errorBuilder: (context, error, stackTrace) {
+                return Container(
+                  width: 100,
+                  height: 100,
+                  color: Colors.grey[300],
+                  child: const Icon(Icons.music_note,
+                      size: 40, color: Colors.grey),
+                );
+              },
+              loadingBuilder: (context, child, loadingProgress) {
+                if (loadingProgress == null) return child;
+                return Container(
+                  width: 100,
+                  height: 100,
+                  color: Colors.grey[200],
+                  child: const Center(
+                    child: CircularProgressIndicator(strokeWidth: 2),
+                  ),
+                );
+              },
+            ),
+          ),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  '【$index】${song.title}',
+                  style: Theme.of(context).textTheme.titleMedium?.copyWith(
+                        color: Theme.of(context).colorScheme.primary,
+                        fontWeight: FontWeight.bold,
+                      ),
                 ),
+                const SizedBox(height: 4),
+                Text('艺术家: ${song.artist}'),
+                Text('类型: ${song.type.displayName}'),
+                if (song.genre != null) Text('流派: ${song.genre}'),
+                Text('BPM: ${song.bpm}'),
+                const SizedBox(height: 8),
+                const Text(
+                  '谱面:',
+                  style: TextStyle(fontWeight: FontWeight.bold),
+                ),
+                ...chartsByType.entries.map((entry) {
+                  final typeStr = entry.key.displayName;
+                  final charts = entry.value;
+                  final chartInfo = charts.map((c) {
+                    final levelStr = c.internalLevel != null
+                        ? '${c.level} (${c.internalLevel})'
+                        : c.level;
+                    return '${c.difficulty.displayName} $levelStr';
+                  }).join(' | ');
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      '  $typeStr: $chartInfo',
+                      style: TextStyle(color: Colors.red[700]),
+                    ),
+                  );
+                }),
+              ],
+            ),
           ),
-          const SizedBox(height: 4),
-          Text('艺术家: ${song.artist}'),
-          Text('类型: ${song.type.displayName}'),
-          if (song.genre != null) Text('流派: ${song.genre}'),
-          Text('BPM: ${song.bpm}'),
-          const SizedBox(height: 8),
-          const Text(
-            '谱面:',
-            style: TextStyle(fontWeight: FontWeight.bold),
-          ),
-          ...chartsByType.entries.map((entry) {
-            final typeStr = entry.key.displayName;
-            final charts = entry.value;
-            final chartInfo = charts.map((c) {
-              final levelStr = c.internalLevel != null
-                  ? '${c.level} (${c.internalLevel})'
-                  : c.level;
-              return '${c.difficulty.displayName} $levelStr';
-            }).join(' | ');
-            return Padding(
-              padding: const EdgeInsets.only(top: 4),
-              child: Text(
-                '  $typeStr: $chartInfo',
-                style: TextStyle(color: Colors.red[700]),
-              ),
-            );
-          }),
         ],
       ),
     );

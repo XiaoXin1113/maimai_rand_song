@@ -4,10 +4,15 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from nonebot import on_command, on_message
 from nonebot.rule import to_me
-from nonebot.adapters.onebot.v11 import Bot, GroupMessageEvent, Message, Event
+from nonebot.adapters.onebot.v11 import Bot, GroupMessageEvent, Message, Event, MessageSegment
 from nonebot.params import CommandArg
 from core import SongManager, SongSelector, SelectionCriteria, Difficulty, SongType, parse_level_input
 from core.group_blacklist import group_blacklist
+
+COVER_BASE_URL = "https://raw.githubusercontent.com/realtvop/maimai_music_metadata/main/covers"
+
+def get_cover_url(song_id: int) -> str:
+    return f"{COVER_BASE_URL}/{song_id:06d}.png"
 
 song_manager = SongManager()
 song_selector = SongSelector(song_manager)
@@ -123,7 +128,13 @@ async def handle_random_song(bot: Bot, event: GroupMessageEvent, args: Message =
             msg += f"\nAlias: {aliases_str}\n"
         
         msg += f"\nFound {result.total_available} matching songs"
-        await random_song.finish(msg)
+        
+        cover_url = get_cover_url(song.id)
+        message = Message([
+            MessageSegment.image(cover_url),
+            MessageSegment.text(msg)
+        ])
+        await random_song.finish(message)
     else:
         await random_song.finish("No matching songs found. Try adjusting your criteria.")
 
@@ -183,7 +194,12 @@ async def handle_search_song(bot: Bot, event: GroupMessageEvent, args: Message =
         if song.alias and len(song.alias) > 0:
             msg += f"\nAlias: {', '.join(song.alias)}\n"
         
-        await search_song.finish(msg.strip())
+        cover_url = get_cover_url(song.id)
+        message = Message([
+            MessageSegment.image(cover_url),
+            MessageSegment.text(msg.strip())
+        ])
+        await search_song.finish(message)
     else:
         msg = f"Found {len(results)} related songs:\n\n"
         for i, song in enumerate(results[:10], 1):

@@ -1,4 +1,9 @@
 const API_BASE = '/api';
+const COVER_BASE_URL = 'https://raw.githubusercontent.com/realtvop/maimai_music_metadata/main/covers';
+
+function getCoverUrl(songId) {
+    return `${COVER_BASE_URL}/${String(songId).padStart(6, '0')}.png`;
+}
 
 async function fetchAPI(endpoint, options = {}) {
     try {
@@ -124,16 +129,26 @@ function displayResults(result) {
                 chartsHtml += '</div>';
             }
             
+            const songId = parseInt(song.id, 10);
+            const coverUrl = getCoverUrl(songId);
+            
             return `
-            <div class="result-card">
-                <h3>🎵 ${song.title}</h3>
-                <p><strong>艺术家：</strong>${song.artist}</p>
-                <p><strong>类型：</strong>${song.type}</p>
-                ${song.genre ? `<p><strong>流派：</strong>${song.genre}</p>` : ''}
-                ${song.bpm ? `<p><strong>BPM：</strong>${song.bpm}</p>` : ''}
-                <div style="margin-top: 10px;">
-                    <strong>谱面：</strong>
-                    ${chartsHtml}
+            <div class="result-card" style="display: flex; gap: 15px;">
+                <div class="cover-container" style="flex-shrink: 0;">
+                    <img src="${coverUrl}" alt="${song.title}" 
+                         style="width: 120px; height: 120px; object-fit: cover; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);"
+                         onerror="this.onerror=null; this.src='data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 width=%22120%22 height=%22120%22><rect fill=%22%23333%22 width=%22120%22 height=%22120%22/><text x=%2250%%22 y=%2250%%22 fill=%22%23666%22 text-anchor=%22middle%22 dy=%22.3em%22>No Image</text></svg>'">
+                </div>
+                <div class="song-info" style="flex: 1;">
+                    <h3>🎵 ${song.title}</h3>
+                    <p><strong>艺术家：</strong>${song.artist}</p>
+                    <p><strong>类型：</strong>${song.type}</p>
+                    ${song.genre ? `<p><strong>流派：</strong>${song.genre}</p>` : ''}
+                    ${song.bpm ? `<p><strong>BPM：</strong>${song.bpm}</p>` : ''}
+                    <div style="margin-top: 10px;">
+                        <strong>谱面：</strong>
+                        ${chartsHtml}
+                    </div>
                 </div>
             </div>
         `}).join('')}

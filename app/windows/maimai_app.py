@@ -2,20 +2,37 @@ import tkinter as tk
 from tkinter import ttk, messagebox, scrolledtext
 import sys
 from pathlib import Path
+import urllib.request
+import ssl
+from io import BytesIO
+from threading import Thread
 
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from core import SongManager, SongSelector, SelectionCriteria, Difficulty, SongType, parse_level_input
 
+try:
+    from PIL import Image, ImageTk
+    HAS_PIL = True
+except ImportError:
+    HAS_PIL = False
+
+COVER_BASE_URL = "https://raw.githubusercontent.com/realtvop/maimai_music_metadata/main/covers"
+
+def get_cover_url(song_id: int) -> str:
+    return f"{COVER_BASE_URL}/{song_id:06d}.png"
+
 class MaimaiApp:
     def __init__(self, root):
         self.root = root
         self.root.title("maimai随机选歌工具 - Windows桌面版")
-        self.root.geometry("1000x700")
-        self.root.minsize(800, 600)
+        self.root.geometry("1100x700")
+        self.root.minsize(900, 600)
         
         self.song_manager = SongManager()
         self.song_selector = SongSelector(self.song_manager)
+        self.cover_cache = {}
+        self.current_cover = None
         
         self.setup_styles()
         self.create_menu()
@@ -133,7 +150,23 @@ class MaimaiApp:
         self.stats_label.pack()
         
     def create_result_panel(self, parent):
-        self.result_text = scrolledtext.ScrolledText(parent, wrap=tk.WORD, font=('Microsoft YaHei UI', 10))
+        main_result_frame = ttk.Frame(parent)
+        main_result_frame.pack(fill=tk.BOTH, expand=True)
+        
+        if HAS_PIL:
+            cover_frame = ttk.LabelFrame(main_result_frame, text="封面", padding="5")
+            cover_frame.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 10))
+            
+            self.cover_label = ttk.Label(cover_frame, text="暂无封面")
+            self.cover_label.pack(padx=5, pady=5)
+            
+            self.cover_image_label = ttk.Label(cover_frame)
+            self.cover_image_label.pack(padx=5, pady=5)
+        
+        text_frame = ttk.Frame(main_result_frame)
+        text_frame.pack(side=tk.RIGHT, fill=tk.BOTH, expand=True)
+        
+        self.result_text = scrolledtext.ScrolledText(text_frame, wrap=tk.WORD, font=('Microsoft YaHei UI', 10))
         self.result_text.pack(fill=tk.BOTH, expand=True)
         self.result_text.insert(tk.END, "请设置条件后点击\"随机选歌\"\n\n")
         self.result_text.config(state=tk.DISABLED)
@@ -207,6 +240,9 @@ class MaimaiApp:
         if not result.songs:
             self.result_text.insert(tk.END, "没有找到符合条件的歌曲\n", 'info')
             self.result_text.config(state=tk.DISABLED)
+            if HAS_PIL:
+                self.cover_image_label.config(image='')
+                self.cover_label.config(text="暂无封面")
             return
             
         self.result_text.insert(tk.END, f"共找到 {result.total_available} 首符合条件的歌曲\n\n", 'header')
@@ -244,7 +280,39 @@ class MaimaiApp:
                 
             self.result_text.insert(tk.END, "\n")
             
+        if HAS_PIL and result.songs:
+            first_song = result.songs[0]
+            self.load_cover_image(first_song.id, first_song.title)
+            
         self.result_text.config(state=tk.DISABLED)
+    
+    def load_cover_image(self, song_id, song_title):
+        def fetch_image():
+            try:
+                if song_id in self.cover_cache:
+                    self.root.after(0, lambda: self.display_cover(self.cover_cache[song_id], song_title))
+                    return
+                
+                url = get_cover_url(song_id)
+                ctx = ssl.create_default_context()
+                ctx.check_hostname = False
+                ctx.verify_mode = ssl.CERT_NONE
+                
+                with urllib.request.urlopen(url, timeout=10, context=ctx) as response:
+                    image_data = response.read()
+                    image = Image.open(BytesIO(image_data))
+                    image = image.resize((150, 150), Image.Resampling.LANCZOS)
+                    self.cover_cache[song_id] = image
+                    self.root.after(0, lambda: self.display_cover(image, song_title))
+            except Exception as e:
+                self.root.after(0, lambda: self.cover_label.config(text=f"加载失败"))
+        
+        Thread(target=fetch_image, daemon=True).start()
+    
+    def display_cover(self, image, song_title):
+        self.current_cover = ImageTk.PhotoImage(image)
+        self.cover_image_label.config(image=self.current_cover)
+        self.cover_label.config(text=song_title[:10] + "..." if len(song_title) > 10 else song_title)
         
     def clear_criteria(self):
         self.difficulty_var.set("")

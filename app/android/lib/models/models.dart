@@ -100,6 +100,9 @@ class Song {
   final List<Chart> charts;
   final List<String> alias;
 
+  static const String coverBaseUrl =
+      'https://raw.githubusercontent.com/realtvop/maimai_music_metadata/main/covers';
+
   Song({
     required this.id,
     required this.title,
@@ -110,6 +113,10 @@ class Song {
     required this.charts,
     this.alias = const [],
   });
+
+  String get coverUrl {
+    return '$coverBaseUrl/${id.toString().padLeft(6, '0')}.png';
+  }
 
   factory Song.fromJson(Map<String, dynamic> json) {
     return Song(
@@ -163,7 +170,8 @@ class SelectionResult {
 }
 
 List<double> parseLevelInput(String levelStr) {
-  if (levelStr.isEmpty) return [null as dynamic, null as dynamic] as List<double>;
+  if (levelStr.isEmpty)
+    return [null as dynamic, null as dynamic] as List<double>;
 
   final hasPlus = levelStr.contains('+');
   final cleanStr = levelStr.replaceAll('+', '').trim();
