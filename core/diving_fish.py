@@ -69,6 +69,20 @@ class DivingFishClient:
             pass
         return None
     
+    async def get_player_info_by_token(self, import_token: str) -> Optional[PlayerInfo]:
+        records = await self.get_player_records("", import_token)
+        if records:
+            player_data = records.get("records", {}).get("player", {})
+            if player_data:
+                return PlayerInfo(
+                    username=player_data.get("username", ""),
+                    nickname=player_data.get("nickname", ""),
+                    rating=player_data.get("rating", 0),
+                    additional_rating=player_data.get("additional_rating", 0),
+                    plate=player_data.get("plate")
+                )
+        return None
+    
     async def get_player_records(self, username: str, import_token: Optional[str] = None) -> Optional[dict]:
         if self.developer_token:
             url = f"{DIVING_FISH_API_BASE}/dev/player/records"

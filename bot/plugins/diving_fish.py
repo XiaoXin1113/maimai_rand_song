@@ -61,29 +61,27 @@ bind_token = on_command("bind", aliases={"绑定"}, priority=5, block=True, rule
 async def handle_bind_token(event: Event, args: Message = CommandArg()):
     user_id = event.user_id
     arg_text = args.extract_plain_text().strip()
-    parts = arg_text.split()
     
-    if len(parts) < 2:
+    if not arg_text:
         await bind_token.finish(
-            "Usage: bind <水鱼用户名> <Import-Token>\n"
+            "Usage: bind <Import-Token>\n"
             "请在水鱼查分器官网生成 Import-Token:\n"
             "https://www.diving-fish.com/maimaidx/prober/\n"
             "登录后 -> 编辑个人资料 -> 生成 Import-Token"
         )
     
-    username = parts[0]
-    import_token = parts[1]
+    import_token = arg_text.split()[0]
     
     client = get_diving_fish_client()
     if not client:
         await bind_token.finish("水鱼查分器服务未配置，请联系管理员")
     
-    player_info = await client.get_player_info(username, import_token)
+    player_info = await client.get_player_info_by_token(import_token)
     if not player_info:
-        await bind_token.finish("验证失败，请检查用户名和 Import-Token 是否正确")
+        await bind_token.finish("验证失败，请检查 Import-Token 是否正确")
     
-    user_token_manager.set_token(user_id, username, import_token)
-    await bind_token.finish(f"绑定成功！\n用户名: {username}\n昵称: {player_info.nickname}\nRating: {player_info.rating}")
+    user_token_manager.set_token(user_id, player_info.username, import_token)
+    await bind_token.finish(f"绑定成功！\n用户名: {player_info.username}\n昵称: {player_info.nickname}\nRating: {player_info.rating}")
 
 unbind_token = on_command("unbind", aliases={"解绑"}, priority=5, block=True, rule=check_blacklist)
 

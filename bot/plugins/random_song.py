@@ -47,8 +47,10 @@ async def handle_random_song(bot: Bot, event: GroupMessageEvent, args: Message =
     parts = arg_text.split() if arg_text else []
     
     criteria = SelectionCriteria(count=1)
-    target_difficulty = Difficulty.MASTER
+    target_difficulty = None
     target_type = None
+    has_difficulty_arg = False
+    has_level_arg = False
     
     for part in parts:
         part_lower = part.lower()
@@ -58,27 +60,38 @@ async def handle_random_song(bot: Bot, event: GroupMessageEvent, args: Message =
             target_type = criteria.song_type
         elif part_lower in ["easy", "ez"]:
             target_difficulty = Difficulty.EASY
+            has_difficulty_arg = True
         elif part_lower in ["basic", "bs", "b"]:
             target_difficulty = Difficulty.BASIC
+            has_difficulty_arg = True
         elif part_lower in ["advanced", "adv", "a"]:
             target_difficulty = Difficulty.ADVANCED
+            has_difficulty_arg = True
         elif part_lower in ["expert", "exp", "e"]:
             target_difficulty = Difficulty.EXPERT
+            has_difficulty_arg = True
         elif part_lower in ["master", "mas", "m"]:
             target_difficulty = Difficulty.MASTER
+            has_difficulty_arg = True
         elif part_lower in ["remaster", "rem", "r"]:
             target_difficulty = Difficulty.RE_MASTER
+            has_difficulty_arg = True
         elif part_lower in ["utage", "u"]:
             target_difficulty = Difficulty.UTAGE
             criteria.song_type = SongType.UTAGE
             target_type = SongType.UTAGE
+            has_difficulty_arg = True
         else:
             min_lv, max_lv = parse_level_input(part)
             if min_lv is not None:
                 criteria.min_level = min_lv
                 criteria.max_level = max_lv
+                has_level_arg = True
     
-    criteria.difficulty = target_difficulty
+    if has_level_arg and not has_difficulty_arg:
+        criteria.difficulty = None
+    else:
+        criteria.difficulty = target_difficulty
     
     result = song_selector.select_random(criteria)
     
@@ -103,11 +116,36 @@ async def handle_random_song(bot: Bot, event: GroupMessageEvent, args: Message =
             msg += f"Version: {first_version}\n"
         
         matching_charts = []
-        for chart in song.charts:
-            if target_type and chart.type != target_type:
-                continue
-            if chart.difficulty == target_difficulty:
+        display_difficulty = target_difficulty if has_difficulty_arg else Difficulty.MASTER
+        
+        if has_level_arg and not has_difficulty_arg:
+            for chart in song.charts:
+                if target_type and chart.type != target_type:
+                    continue
+                
+                level = chart.internal_level
+                if level is None:
+                    try:
+                        level_str = chart.level.replace("+", ".7")
+                        level = float(level_str)
+                    except ValueError:
+                        continue
+                
+                if level is None:
+                    continue
+                
+                if criteria.min_level is not None and level < criteria.min_level:
+                    continue
+                if criteria.max_level is not None and level > criteria.max_level:
+                    continue
+                
                 matching_charts.append(chart)
+        else:
+            for chart in song.charts:
+                if target_type and chart.type != target_type:
+                    continue
+                if chart.difficulty == display_difficulty:
+                    matching_charts.append(chart)
         
         if matching_charts:
             chart = matching_charts[0]
@@ -140,12 +178,13 @@ async def handle_random_song(bot: Bot, event: GroupMessageEvent, args: Message =
         msg += f"\nFound {result.total_available} matching songs"
         
         user_token = user_token_manager.get_token(event.user_id)
-        if user_token:
+        if user_token and matching_charts:
             client = get_diving_fish_client()
             if client:
                 try:
-                    song_type = "DX" if song.type == SongType.DX else "SD"
-                    diff_name = DIFFICULTY_NAMES.get(target_difficulty, "Master").lower()
+                    chart = matching_charts[0]
+                    song_type = "DX" if chart.type == SongType.DX else "SD"
+                    diff_name = DIFFICULTY_NAMES.get(chart.difficulty, "Master").lower()
                     score = await client.get_song_score_by_name(
                         user_token.diving_fish_username,
                         song.title,
