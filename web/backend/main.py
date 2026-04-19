@@ -1,7 +1,7 @@
 from fastapi import FastAPI, HTTPException, Depends, Request, Response
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse, JSONResponse, RedirectResponse
 from pydantic import BaseModel
 from typing import Optional
 import sys
@@ -117,7 +117,7 @@ async def root():
 async def admin(request: Request):
     session_token = get_session_from_request(request)
     if not session_token:
-        return FileResponse(Path(__file__).parent.parent / "frontend" / "login.html")
+        return RedirectResponse(url="/login", status_code=302)
     return FileResponse(Path(__file__).parent.parent / "frontend" / "admin.html")
 
 @app.get("/login")

@@ -485,7 +485,6 @@
                 
                 if (!response.ok) {
                     console.error('Auth check failed with status:', response.status);
-                    window.location.replace('/login');
                     return false;
                 }
                 
@@ -498,7 +497,6 @@
                 return true;
             } catch (error) {
                 console.error('Auth check failed:', error);
-                window.location.replace('/login');
                 return false;
             }
         }
