@@ -313,13 +313,20 @@ async def get_database_stats(session_token: str = Depends(require_auth)):
         with open(DATABASE_PATH, 'r', encoding='utf-8') as f:
             data = json.load(f)
         
-        total_songs = data.get("total_songs", len(data.get("songs", [])))
-        total_charts = data.get("total_charts", 0)
-        last_updated = data.get("last_updated", "未知")
-        
-        if not total_charts:
-            songs = data.get("songs", [])
-            total_charts = sum(len(song.get("charts", [])) for song in songs)
+        # 检查data是否为列表（直接保存的歌曲列表）
+        if isinstance(data, list):
+            total_songs = len(data)
+            total_charts = sum(len(song.get("charts", [])) for song in data)
+            last_updated = "未知"
+        else:
+            # 兼容旧格式
+            total_songs = data.get("total_songs", len(data.get("songs", [])))
+            total_charts = data.get("total_charts", 0)
+            last_updated = data.get("last_updated", "未知")
+            
+            if not total_charts:
+                songs = data.get("songs", [])
+                total_charts = sum(len(song.get("charts", [])) for song in songs)
         
         return {
             "total_songs": total_songs,

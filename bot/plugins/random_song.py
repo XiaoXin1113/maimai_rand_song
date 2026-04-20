@@ -1,5 +1,6 @@
 import sys
 from pathlib import Path
+# 添加项目根目录到Python路径
 sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 
 from nonebot import on_command, on_message
@@ -10,14 +11,27 @@ from core import SongManager, SongSelector, SelectionCriteria, Difficulty, SongT
 from core.group_blacklist import group_blacklist
 from core.user_tokens import user_token_manager
 
+# 封面图片基础URL
 COVER_BASE_URL = "https://shama.dxrating.net/images/cover/v2"
 
+
 def get_cover_url(image_name: str) -> str:
+    """获取歌曲封面图片URL
+    
+    Args:
+        image_name: 图片文件名
+        
+    Returns:
+        完整的封面图片URL
+    """
     return f"{COVER_BASE_URL}/{image_name}.jpg"
 
+
+# 初始化歌曲管理器和选择器
 song_manager = SongManager()
 song_selector = SongSelector(song_manager)
 
+# 难度名称映射
 DIFFICULTY_NAMES = {
     Difficulty.EASY: "Easy",
     Difficulty.BASIC: "Basic",
@@ -28,72 +42,117 @@ DIFFICULTY_NAMES = {
     Difficulty.UTAGE: "Utage",
 }
 
+# 歌曲类型名称映射
 TYPE_NAMES = {
     SongType.STANDARD: "std",
     SongType.DX: "DX",
     SongType.UTAGE: "Utage",
 }
 
+
 async def check_blacklist(event: Event) -> bool:
+    """检查群聊是否在黑名单中
+    
+    Args:
+        event: 事件对象
+        
+    Returns:
+        如果不在黑名单中返回True，否则返回False
+    """
     if isinstance(event, GroupMessageEvent):
         return not group_blacklist.is_blocked(event.group_id)
     return True
 
+
+# 注册随机歌曲命令
 random_song = on_command("random_song", aliases={"rs"}, priority=5, block=True, rule=check_blacklist)
+
 
 @random_song.handle()
 async def handle_random_song(bot: Bot, event: GroupMessageEvent, args: Message = CommandArg()):
+    """处理随机歌曲命令
+    
+    Args:
+        bot: 机器人实例
+        event: 群聊消息事件
+        args: 命令参数
+    """
     arg_text = args.extract_plain_text().strip()
     parts = arg_text.split() if arg_text else []
+    print(f"[DEBUG] rs called with arg_text: '{arg_text}'")
+    print(f"[DEBUG] parts: {parts}")
     
+    # 初始化选择条件
     criteria = SelectionCriteria(count=1)
     target_difficulty = None
     target_type = None
     has_difficulty_arg = False
     has_level_arg = False
     
+    # 解析命令参数
     for part in parts:
         part_lower = part.lower()
+        print(f"[DEBUG] processing part: '{part}' (lower: '{part_lower}')")
         
+        # 处理歌曲类型参数
         if part_lower in ["dx", "std"]:
             criteria.song_type = SongType.DX if part_lower == "dx" else SongType.STANDARD
             target_type = criteria.song_type
+            print(f"[DEBUG] set song_type to: {criteria.song_type}")
+        # 处理难度参数
         elif part_lower in ["easy", "ez"]:
             target_difficulty = Difficulty.EASY
             has_difficulty_arg = True
+            print(f"[DEBUG] set difficulty to: EASY")
         elif part_lower in ["basic", "bs", "b"]:
             target_difficulty = Difficulty.BASIC
             has_difficulty_arg = True
+            print(f"[DEBUG] set difficulty to: BASIC")
         elif part_lower in ["advanced", "adv", "a"]:
             target_difficulty = Difficulty.ADVANCED
             has_difficulty_arg = True
+            print(f"[DEBUG] set difficulty to: ADVANCED")
         elif part_lower in ["expert", "exp", "e"]:
             target_difficulty = Difficulty.EXPERT
             has_difficulty_arg = True
+            print(f"[DEBUG] set difficulty to: EXPERT")
         elif part_lower in ["master", "mas", "m"]:
             target_difficulty = Difficulty.MASTER
             has_difficulty_arg = True
+            print(f"[DEBUG] set difficulty to: MASTER")
         elif part_lower in ["remaster", "rem", "r"]:
             target_difficulty = Difficulty.RE_MASTER
             has_difficulty_arg = True
+            print(f"[DEBUG] set difficulty to: RE_MASTER")
         elif part_lower in ["utage", "u"]:
             target_difficulty = Difficulty.UTAGE
             criteria.song_type = SongType.UTAGE
             target_type = SongType.UTAGE
             has_difficulty_arg = True
+            print(f"[DEBUG] set difficulty to: UTAGE, song_type to: UTAGE")
+        # 处理等级参数
         else:
             min_lv, max_lv = parse_level_input(part)
+            print(f"[DEBUG] parse_level_input('{part}') returned: min={min_lv}, max={max_lv}")
             if min_lv is not None:
                 criteria.min_level = min_lv
                 criteria.max_level = max_lv
                 has_level_arg = True
+                print(f"[DEBUG] set min_level={min_lv}, max_level={max_lv}")
     
+    # 设置难度条件
     if has_level_arg and not has_difficulty_arg:
         criteria.difficulty = None
+        print(f"[DEBUG] set criteria.difficulty to None (has_level_arg=True, has_difficulty_arg=False)")
     else:
         criteria.difficulty = target_difficulty if target_difficulty is not None else Difficulty.MASTER
+        print(f"[DEBUG] set criteria.difficulty to: {criteria.difficulty}")
     
+    print(f"[DEBUG] Final criteria: difficulty={criteria.difficulty}, min_level={criteria.min_level}, max_level={criteria.max_level}, song_type={criteria.song_type}")
+    
+    # 随机选择歌曲
     result = song_selector.select_random(criteria)
+    print(f"[DEBUG] select_random result: {len(result.songs)} songs, {result.total_available} available")
     
     if result.songs:
         song = result.songs[0]
@@ -106,6 +165,7 @@ async def handle_random_song(bot: Bot, event: GroupMessageEvent, args: Message =
         
         msg += f"BPM: {song.bpm}\n"
         
+        # 获取歌曲版本信息
         first_version = song.version
         if not first_version and song.charts:
             versions = [c.version for c in song.charts if c.version]
@@ -115,14 +175,17 @@ async def handle_random_song(bot: Bot, event: GroupMessageEvent, args: Message =
         if first_version:
             msg += f"Version: {first_version}\n"
         
+        # 处理谱面信息
         matching_charts = []
         display_difficulty = target_difficulty if has_difficulty_arg else Difficulty.MASTER
         
+        # 当指定了等级但未指定难度时，查找所有符合等级的谱面
         if has_level_arg and not has_difficulty_arg:
             for chart in song.charts:
                 if target_type and chart.type != target_type:
                     continue
                 
+                # 获取谱面等级
                 level = chart.internal_level
                 if level is None:
                     try:
@@ -134,6 +197,7 @@ async def handle_random_song(bot: Bot, event: GroupMessageEvent, args: Message =
                 if level is None:
                     continue
                 
+                # 检查等级范围
                 if criteria.min_level is not None and level < criteria.min_level:
                     continue
                 if criteria.max_level is not None and level > criteria.max_level:
@@ -141,6 +205,7 @@ async def handle_random_song(bot: Bot, event: GroupMessageEvent, args: Message =
                 
                 matching_charts.append(chart)
         else:
+            # 当指定了难度时，查找符合难度和等级的谱面
             for chart in song.charts:
                 if target_type and chart.type != target_type:
                     continue
@@ -186,6 +251,7 @@ async def handle_random_song(bot: Bot, event: GroupMessageEvent, args: Message =
                     msg += f" / Break {nc.break_note}"
                 msg += f" (Total {nc.total})\n"
         
+        # 显示歌曲别名
         if song.alias and len(song.alias) > 0:
             aliases_str = ", ".join(song.alias[:3])
             if len(song.alias) > 3:
@@ -194,6 +260,7 @@ async def handle_random_song(bot: Bot, event: GroupMessageEvent, args: Message =
         
         msg += f"\nFound {result.total_available} matching songs"
         
+        # 尝试获取用户成绩
         user_token = user_token_manager.get_token(event.user_id)
         if user_token and matching_charts:
             client = get_diving_fish_client()
@@ -227,6 +294,7 @@ async def handle_random_song(bot: Bot, event: GroupMessageEvent, args: Message =
                 except Exception:
                     pass
         
+        # 发送消息（包含图片）
         try:
             if song.image_url:
                 cover_url = get_cover_url(song.image_url)
@@ -238,15 +306,26 @@ async def handle_random_song(bot: Bot, event: GroupMessageEvent, args: Message =
     else:
         await random_song.finish("No matching songs found. Try adjusting your criteria.")
 
+
+# 注册搜索歌曲命令
 search_song = on_command("search", aliases={"find"}, priority=5, block=True, rule=check_blacklist)
+
 
 @search_song.handle()
 async def handle_search_song(bot: Bot, event: GroupMessageEvent, args: Message = CommandArg()):
+    """处理搜索歌曲命令
+    
+    Args:
+        bot: 机器人实例
+        event: 群聊消息事件
+        args: 命令参数
+    """
     keyword = args.extract_plain_text().strip()
     
     if not keyword:
         await search_song.finish("Please enter a song name or alias to search")
     
+    # 搜索歌曲
     all_songs = song_manager.get_all_songs()
     results = []
     
@@ -260,6 +339,7 @@ async def handle_search_song(bot: Bot, event: GroupMessageEvent, args: Message =
         await search_song.finish(f"No songs found containing \"{keyword}\"")
     
     if len(results) == 1:
+        # 显示单个搜索结果
         song = results[0]
         msg = f"Search Result\n\n"
         msg += f"Title: {song.title}\n"
@@ -271,6 +351,7 @@ async def handle_search_song(bot: Bot, event: GroupMessageEvent, args: Message =
         msg += f"BPM: {song.bpm}\n"
         msg += f"Type: {TYPE_NAMES.get(song.type, song.type.value)}\n"
         
+        # 获取歌曲版本信息
         first_version = song.version
         if not first_version and song.charts:
             versions = [c.version for c in song.charts if c.version]
@@ -280,6 +361,7 @@ async def handle_search_song(bot: Bot, event: GroupMessageEvent, args: Message =
         if first_version:
             msg += f"Version: {first_version}\n"
         
+        # 显示谱面列表
         msg += f"\nDifficulty List:\n"
         
         chart_groups = {}
@@ -300,9 +382,11 @@ async def handle_search_song(bot: Bot, event: GroupMessageEvent, args: Message =
                         level_display += f"({chart.internal_level:.1f})"
                     msg += f"  {diff_str}: {level_display}\n"
         
+        # 显示别名
         if song.alias and len(song.alias) > 0:
             msg += f"\nAlias: {', '.join(song.alias)}\n"
         
+        # 发送消息（包含图片）
         try:
             if song.image_url:
                 cover_url = get_cover_url(song.image_url)
@@ -312,6 +396,7 @@ async def handle_search_song(bot: Bot, event: GroupMessageEvent, args: Message =
         except Exception:
             await search_song.send(msg.strip())
     else:
+        # 显示多个搜索结果
         msg = f"Found {len(results)} related songs:\n\n"
         for i, song in enumerate(results[:10], 1):
             msg += f"{i}. {song.title} - {song.artist}\n"
@@ -321,10 +406,20 @@ async def handle_search_song(bot: Bot, event: GroupMessageEvent, args: Message =
         
         await search_song.finish(msg.strip())
 
+
+# 注册等级列表命令
 level_list = on_command("level", aliases={"lv"}, priority=5, block=True, rule=check_blacklist)
+
 
 @level_list.handle()
 async def handle_level_list(bot: Bot, event: GroupMessageEvent, args: Message = CommandArg()):
+    """处理等级列表命令
+    
+    Args:
+        bot: 机器人实例
+        event: 群聊消息事件
+        args: 命令参数
+    """
     arg_text = args.extract_plain_text().strip()
     parts = arg_text.split() if arg_text else []
     
@@ -333,6 +428,7 @@ async def handle_level_list(bot: Bot, event: GroupMessageEvent, args: Message = 
     target_difficulty = Difficulty.MASTER
     level_display = None
     
+    # 解析命令参数
     for part in parts:
         part_lower = part.lower()
         
@@ -352,6 +448,7 @@ async def handle_level_list(bot: Bot, event: GroupMessageEvent, args: Message = 
     if min_level is None:
         await level_list.finish("Please specify a level, e.g.: level 14, level 14+, level 14.5")
     
+    # 查找符合条件的歌曲
     all_songs = song_manager.get_all_songs()
     results = []
     
@@ -365,6 +462,7 @@ async def handle_level_list(bot: Bot, event: GroupMessageEvent, args: Message = 
         diff_str = DIFFICULTY_NAMES.get(target_difficulty, target_difficulty.value)
         await level_list.finish(f"No {diff_str} charts found with level {level_display}")
     
+    # 排序并显示结果
     results.sort(key=lambda x: x[0].title)
     
     diff_str = DIFFICULTY_NAMES.get(target_difficulty, target_difficulty.value)
@@ -379,10 +477,14 @@ async def handle_level_list(bot: Bot, event: GroupMessageEvent, args: Message = 
     
     await level_list.finish(msg.strip())
 
+
+# 注册帮助命令
 help_cmd = on_command("help", priority=5, block=True, rule=check_blacklist)
+
 
 @help_cmd.handle()
 async def handle_help():
+    """处理帮助命令"""
     help_text = """maimai Random Song Bot
 
 Commands:
