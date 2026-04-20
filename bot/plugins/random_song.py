@@ -188,6 +188,16 @@ async def handle_random_song(bot: Bot, event: GroupMessageEvent, args: Message =
         matching_charts = []
         display_difficulty = target_difficulty if has_difficulty_arg else Difficulty.MASTER
         
+        # 难度到level_index的映射
+        difficulty_to_level_index = {
+            Difficulty.BASIC: 0,
+            Difficulty.ADVANCED: 1,
+            Difficulty.EXPERT: 2,
+            Difficulty.MASTER: 3,
+            Difficulty.RE_MASTER: 4,
+            Difficulty.UTAGE: 3  # 宴会场难度使用master的索引
+        }
+        
         # 当指定了等级但未指定难度时，查找所有符合等级的谱面
         if has_level_arg and not has_difficulty_arg:
             for chart in song.charts:
@@ -246,7 +256,11 @@ async def handle_random_song(bot: Bot, event: GroupMessageEvent, args: Message =
             if chart.internal_level:
                 level_display += f" ({chart.internal_level:.1f})"
             
-            msg += f"\n[{type_str}] {diff_str} {level_display}\n"
+            # 计算谱面ID（同一歌曲不同难度使用相同ID，DX和STD使用不同ID）
+            song_type_suffix = 1 if chart.type == SongType.DX else 0
+            chart_id = f"{song.id}.{song_type_suffix}"
+            
+            msg += f"\n[{type_str}] {diff_str} {level_display} (ID: {chart_id})\n"
             
             if chart.note_designer:
                 msg += f"Charter: {chart.note_designer}\n"

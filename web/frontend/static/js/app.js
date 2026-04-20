@@ -125,7 +125,10 @@ function displayResults(result) {
                 chartsHtml += `<div style="margin-top: 5px;"><strong>${type}:</strong> `;
                 chartsHtml += charts.map(c => {
                     const levelDisplay = c.internal_level ? `${c.level} (${c.internal_level})` : c.level;
-                    return `${c.difficulty} ${levelDisplay}`;
+                    // 计算谱面ID（同一歌曲不同难度使用相同ID，DX和STD使用不同ID）
+                    const songTypeSuffix = c.type === 'dx' ? 1 : 0;
+                    const chartId = `${song.id}.${songTypeSuffix}`;
+                    return `${c.difficulty} ${levelDisplay} (ID: ${chartId})`;
                 }).join(' | ');
                 chartsHtml += '</div>';
             }
