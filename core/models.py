@@ -50,6 +50,7 @@ class Regions(BaseModel):
 
 
 class Chart(BaseModel):
+    id: Optional[int] = None
     type: SongType
     difficulty: Difficulty
     level: str

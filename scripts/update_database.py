@@ -146,6 +146,7 @@ def parse_dxdata_sheets(sheets: list) -> list[Chart]:
             )
         
         chart = Chart(
+            id=sheet.get("internalId"),
             type=TYPE_MAP.get(sheet_type, SongType.STANDARD),
             difficulty=DIFFICULTY_MAP.get(difficulty, Difficulty.BASIC),
             level=str(sheet.get("level", "")),

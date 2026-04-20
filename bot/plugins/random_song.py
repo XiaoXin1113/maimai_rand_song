@@ -256,8 +256,8 @@ async def handle_random_song(bot: Bot, event: GroupMessageEvent, args: Message =
             if chart.internal_level:
                 level_display += f" ({chart.internal_level:.1f})"
             
-            # 计算谱面ID（STD使用原始ID，DX使用ID+10000）
-            chart_id = song.id if chart.type != SongType.DX else song.id + 10000
+            # 使用谱面ID（优先使用真实ID，没有时使用计算的ID）
+            chart_id = chart.id if chart.id is not None else (song.id if chart.type != SongType.DX else song.id + 10000)
             
             msg += f"\n[{type_str}] {diff_str} {level_display} (ID: {chart_id})\n"
             
