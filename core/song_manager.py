@@ -214,16 +214,16 @@ class SongSelector:
         
         # 按宴会场过滤
         if criteria.utage_only:
-            # 只选择宴会场歌曲（流派为UTAGE）
+            # 只选择宴会场歌曲（谱面类型为utage）
             filtered = [
                 s for s in filtered 
-                if s.genre == "UTAGE"
+                if any(chart.type == SongType.UTAGE for chart in s.charts)
             ]
         else:
-            # 只选择非宴会场歌曲（流派不是UTAGE）
+            # 只选择非宴会场歌曲（不包含谱面类型为utage的歌曲）
             filtered = [
                 s for s in filtered 
-                if s.genre != "UTAGE"
+                if not any(chart.type == SongType.UTAGE for chart in s.charts)
             ]
         
         # 按流派过滤
