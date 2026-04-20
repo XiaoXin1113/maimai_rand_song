@@ -128,6 +128,7 @@ class SelectionRequest(BaseModel):
     song_type: Optional[str] = None
     genre: Optional[str] = None
     count: int = 1
+    utage_only: bool = False
 
 class LoginRequest(BaseModel):
     username: str
@@ -241,7 +242,8 @@ async def select_song(request: SelectionRequest):
         difficulty=Difficulty(request.difficulty) if request.difficulty else None,
         song_type=SongType(request.song_type) if request.song_type else None,
         genre=request.genre,
-        count=request.count
+        count=request.count,
+        utage_only=request.utage_only
     )
     
     result = song_selector.select_random(criteria)

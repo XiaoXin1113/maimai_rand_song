@@ -88,14 +88,19 @@ async def handle_random_song(bot: Bot, event: GroupMessageEvent, args: Message =
     target_type = None
     has_difficulty_arg = False
     has_level_arg = False
+    utage_only = False
     
     # 解析命令参数
     for part in parts:
         part_lower = part.lower()
         print(f"[DEBUG] processing part: '{part}' (lower: '{part_lower}')")
         
+        # 处理宴会场参数
+        if part_lower in ["宴", "宴会场", "utage"]:
+            utage_only = True
+            print(f"[DEBUG] set utage_only to: True")
         # 处理歌曲类型参数
-        if part_lower in ["dx", "std"]:
+        elif part_lower in ["dx", "std"]:
             criteria.song_type = SongType.DX if part_lower == "dx" else SongType.STANDARD
             target_type = criteria.song_type
             print(f"[DEBUG] set song_type to: {criteria.song_type}")
@@ -148,7 +153,10 @@ async def handle_random_song(bot: Bot, event: GroupMessageEvent, args: Message =
         criteria.difficulty = target_difficulty if target_difficulty is not None else Difficulty.MASTER
         print(f"[DEBUG] set criteria.difficulty to: {criteria.difficulty}")
     
-    print(f"[DEBUG] Final criteria: difficulty={criteria.difficulty}, min_level={criteria.min_level}, max_level={criteria.max_level}, song_type={criteria.song_type}")
+    # 设置宴会场过滤
+    criteria.utage_only = utage_only
+    
+    print(f"[DEBUG] Final criteria: difficulty={criteria.difficulty}, min_level={criteria.min_level}, max_level={criteria.max_level}, song_type={criteria.song_type}, utage_only={criteria.utage_only}")
     
     # 随机选择歌曲
     result = song_selector.select_random(criteria)

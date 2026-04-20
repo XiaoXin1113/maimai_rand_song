@@ -91,6 +91,7 @@ class SelectionCriteria(BaseModel):
     version: Optional[str] = None
     exclude_played: bool = False
     count: int = 1
+    utage_only: bool = False
 
 
 class SelectionResult(BaseModel):

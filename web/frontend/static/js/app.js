@@ -79,7 +79,8 @@ async function selectSongs(event) {
         max_level: parseFloat(document.getElementById('maxLevel').value) || null,
         song_type: typeMap[typeValue] || null,
         genre: document.getElementById('genre').value || null,
-        count: parseInt(document.getElementById('count').value) || 1
+        count: parseInt(document.getElementById('count').value) || 1,
+        utage_only: document.getElementById('utage').checked
     };
     
     try {
