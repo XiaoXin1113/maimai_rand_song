@@ -134,7 +134,8 @@ async def handle_random_song(bot: Bot, event: GroupMessageEvent, args: Message =
             criteria.song_type = SongType.UTAGE
             target_type = SongType.UTAGE
             has_difficulty_arg = True
-            print(f"[DEBUG] set difficulty to: UTAGE, song_type to: UTAGE")
+            utage_only = True  # 当指定UTAGE难度时，也应该只从宴会场选择
+            print(f"[DEBUG] set difficulty to: UTAGE, song_type to: UTAGE, utage_only to: True")
         # 处理等级参数
         else:
             min_lv, max_lv = parse_level_input(part)
