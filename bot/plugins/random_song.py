@@ -91,7 +91,7 @@ async def handle_random_song(bot: Bot, event: GroupMessageEvent, args: Message =
     if has_level_arg and not has_difficulty_arg:
         criteria.difficulty = None
     else:
-        criteria.difficulty = target_difficulty
+        criteria.difficulty = target_difficulty if target_difficulty is not None else Difficulty.MASTER
     
     result = song_selector.select_random(criteria)
     
@@ -145,6 +145,23 @@ async def handle_random_song(bot: Bot, event: GroupMessageEvent, args: Message =
                 if target_type and chart.type != target_type:
                     continue
                 if chart.difficulty == display_difficulty:
+                    # 检查等级范围（如果指定了等级）
+                    if has_level_arg:
+                        level = chart.internal_level
+                        if level is None:
+                            try:
+                                level_str = chart.level.replace("+", ".7")
+                                level = float(level_str)
+                            except ValueError:
+                                continue
+                        
+                        if level is None:
+                            continue
+                        
+                        if criteria.min_level is not None and level < criteria.min_level:
+                            continue
+                        if criteria.max_level is not None and level > criteria.max_level:
+                            continue
                     matching_charts.append(chart)
         
         if matching_charts:

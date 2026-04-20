@@ -2,7 +2,9 @@ import httpx
 from typing import Optional
 from dataclasses import dataclass
 from datetime import datetime
+import logging
 
+logger = logging.getLogger(__name__)
 
 DIVING_FISH_API_BASE = "https://www.diving-fish.com/api/maimaidxprober"
 
@@ -71,16 +73,21 @@ class DivingFishClient:
     
     async def get_player_info_by_token(self, import_token: str) -> Optional[PlayerInfo]:
         records = await self.get_player_records("", import_token)
+        print(f"[DEBUG] get_player_records response: {records}")
         if records:
-            player_data = records.get("records", {}).get("player", {})
-            if player_data:
+            print(f"[DEBUG] records keys: {records.keys()}")
+            # 检查根级别字段
+            if "username" in records and "nickname" in records:
+                print(f"[DEBUG] Found player data in root: {records}")
                 return PlayerInfo(
-                    username=player_data.get("username", ""),
-                    nickname=player_data.get("nickname", ""),
-                    rating=player_data.get("rating", 0),
-                    additional_rating=player_data.get("additional_rating", 0),
-                    plate=player_data.get("plate")
+                    username=records.get("username", ""),
+                    nickname=records.get("nickname", ""),
+                    rating=records.get("rating", 0),
+                    additional_rating=records.get("additional_rating", 0),
+                    plate=records.get("plate")
                 )
+            else:
+                print(f"[DEBUG] No player data found in root")
         return None
     
     async def get_player_records(self, username: str, import_token: Optional[str] = None) -> Optional[dict]:
@@ -91,14 +98,21 @@ class DivingFishClient:
             url = f"{DIVING_FISH_API_BASE}/player/records"
             params = {}
         else:
+            print("[DEBUG] No developer_token or import_token provided")
             return None
         
         try:
+            print(f"[DEBUG] Requesting: {url}")
             response = await self.client.get(url, params=params, headers=self._get_headers(import_token))
+            print(f"[DEBUG] Response status: {response.status_code}")
             if response.status_code == 200:
-                return response.json()
-        except Exception:
-            pass
+                data = response.json()
+                print(f"[DEBUG] Response data type: {type(data)}, keys: {data.keys() if isinstance(data, dict) else 'N/A'}")
+                return data
+            else:
+                print(f"[DEBUG] Response error: {response.text[:500]}")
+        except Exception as e:
+            print(f"[DEBUG] Exception: {e}")
         return None
     
     async def get_song_score(

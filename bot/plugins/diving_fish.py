@@ -61,6 +61,7 @@ bind_token = on_command("bind", aliases={"绑定"}, priority=5, block=True, rule
 async def handle_bind_token(event: Event, args: Message = CommandArg()):
     user_id = event.user_id
     arg_text = args.extract_plain_text().strip()
+    print(f"[DEBUG] bind called with arg_text: {arg_text[:20]}...")
     
     if not arg_text:
         await bind_token.finish(
@@ -71,12 +72,15 @@ async def handle_bind_token(event: Event, args: Message = CommandArg()):
         )
     
     import_token = arg_text.split()[0]
+    print(f"[DEBUG] import_token: {import_token[:20]}...")
     
     client = get_diving_fish_client()
+    print(f"[DEBUG] client: {client}")
     if not client:
         await bind_token.finish("水鱼查分器服务未配置，请联系管理员")
     
     player_info = await client.get_player_info_by_token(import_token)
+    print(f"[DEBUG] player_info: {player_info}")
     if not player_info:
         await bind_token.finish("验证失败，请检查 Import-Token 是否正确")
     
