@@ -125,8 +125,8 @@ function displayResults(result) {
                 chartsHtml += `<div style="margin-top: 5px;"><strong>${type}:</strong> `;
                 chartsHtml += charts.map(c => {
                     const levelDisplay = c.internal_level ? `${c.level} (${c.internal_level})` : c.level;
-                    // 使用谱面ID（优先使用真实ID，没有时计算：ID<10000时DX版本+10000，否则直接使用原始ID）
-                    const chartId = c.id || (c.type === 'dx' ? (song.id < 10000 ? song.id + 10000 : song.id) : song.id);
+                    // 使用谱面ID（直接使用真实ID）
+                    const chartId = c.id;
                     return `${c.difficulty} ${levelDisplay} (ID: ${chartId})`;
                 }).join(' | ');
                 chartsHtml += '</div>';
