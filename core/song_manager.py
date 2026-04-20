@@ -220,10 +220,10 @@ class SongSelector:
                 if s.type == SongType.UTAGE or any(chart.type == SongType.UTAGE for chart in s.charts)
             ]
         else:
-            # 只选择非宴会场歌曲（类型不是UTAGE且所有谱面类型也不是UTAGE）
+            # 只选择非宴会场歌曲（不是宴会场歌曲）
             filtered = [
                 s for s in filtered 
-                if s.type != SongType.UTAGE and not any(chart.type == SongType.UTAGE for chart in s.charts)
+                if not (s.type == SongType.UTAGE or any(chart.type == SongType.UTAGE for chart in s.charts))
             ]
         
         # 按流派过滤
