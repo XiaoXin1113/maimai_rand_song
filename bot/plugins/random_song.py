@@ -10,6 +10,7 @@ from nonebot.params import CommandArg
 from core import SongManager, SongSelector, SelectionCriteria, Difficulty, SongType, parse_level_input, get_diving_fish_client
 from core.group_blacklist import group_blacklist
 from core.user_tokens import user_token_manager
+from config.settings import settings
 
 # 封面图片基础URL
 COVER_BASE_URL = "https://shama.dxrating.net/images/cover/v2"
@@ -62,6 +63,109 @@ async def check_blacklist(event: Event) -> bool:
     if isinstance(event, GroupMessageEvent):
         return not group_blacklist.is_blocked(event.group_id)
     return True
+
+
+def is_superuser(user_id: int) -> bool:
+    """检查用户是否为超级用户
+    
+    Args:
+        user_id: 用户QQ号
+        
+    Returns:
+        如果是超级用户返回True，否则返回False
+    """
+    return str(user_id) in settings.BOT_SUPERUSERS
+
+
+# 注册debug命令（仅超级用户可用）
+debug_cmd = on_command("debug", aliases={"dbg"}, priority=10, block=True)
+
+
+@debug_cmd.handle()
+async def handle_debug(bot: Bot, event: GroupMessageEvent, args: Message = CommandArg()):
+    """处理debug命令，仅超级用户可用
+    
+    Args:
+        bot: 机器人实例
+        event: 群聊消息事件
+        args: 命令参数
+    """
+    user_id = event.user_id
+    
+    if not is_superuser(user_id):
+        await debug_cmd.finish("此命令仅管理员可用。")
+    
+    arg_text = args.extract_plain_text().strip()
+    parts = arg_text.split() if arg_text else []
+    
+    print(f"[DEBUG] debug called by superuser {user_id} with args: {parts}")
+    
+    criteria = SelectionCriteria(count=1)
+    target_difficulty = None
+    target_type = None
+    has_difficulty_arg = False
+    has_level_arg = False
+    utage_only = False
+    
+    for part in parts:
+        part_lower = part.lower()
+        
+        if part_lower in ["宴", "宴会场", "utage"]:
+            utage_only = True
+        elif part_lower in ["dx", "std"]:
+            criteria.song_type = SongType.DX if part_lower == "dx" else SongType.STANDARD
+            target_type = criteria.song_type
+        elif part_lower in ["easy", "ez"]:
+            target_difficulty = Difficulty.EASY
+            has_difficulty_arg = True
+        elif part_lower in ["basic", "bs", "b"]:
+            target_difficulty = Difficulty.BASIC
+            has_difficulty_arg = True
+        elif part_lower in ["advanced", "adv", "a"]:
+            target_difficulty = Difficulty.ADVANCED
+            has_difficulty_arg = True
+        elif part_lower in ["expert", "exp", "e"]:
+            target_difficulty = Difficulty.EXPERT
+            has_difficulty_arg = True
+        elif part_lower in ["master", "mas", "m"]:
+            target_difficulty = Difficulty.MASTER
+            has_difficulty_arg = True
+        elif part_lower in ["remaster", "rem", "r"]:
+            target_difficulty = Difficulty.RE_MASTER
+            has_difficulty_arg = True
+        elif part_lower in ["utage", "u"]:
+            target_difficulty = Difficulty.UTAGE
+            criteria.song_type = SongType.UTAGE
+            target_type = SongType.UTAGE
+            has_difficulty_arg = True
+            utage_only = True
+        else:
+            min_lv, max_lv = parse_level_input(part)
+            if min_lv is not None:
+                criteria.min_level = min_lv
+                criteria.max_level = max_lv
+                has_level_arg = True
+    
+    if has_level_arg and not has_difficulty_arg:
+        criteria.difficulty = None
+    else:
+        criteria.difficulty = target_difficulty if target_difficulty is not None else Difficulty.MASTER
+    
+    criteria.utage_only = utage_only
+    
+    print(f"[DEBUG] criteria: difficulty={criteria.difficulty}, min_level={criteria.min_level}, max_level={criteria.max_level}, song_type={criteria.song_type}, utage_only={criteria.utage_only}")
+    
+    result = song_selector.select_random(criteria)
+    print(f"[DEBUG] select_random: {len(result.songs)} songs selected, {result.total_available} total available")
+    print(f"[DEBUG] all songs in pool: {[s.title for s in song_selector.get_all_songs()[:10]]}...")
+    print(f"[DEBUG] filtering applied: utage_only={utage_only}, difficulty={criteria.difficulty}, level_range=({criteria.min_level}, {criteria.max_level})")
+    
+    if result.songs:
+        song = result.songs[0]
+        print(f"[DEBUG] selected song: {song.title} (id={song.id}), genre={song.genre}, type={song.type}")
+        print(f"[DEBUG] song charts: {[(c.type, c.difficulty, c.level) for c in song.charts]}")
+    
+    await debug_cmd.finish(f"[DEBUG] 筛选条件: utage_only={utage_only}, difficulty={criteria.difficulty}, level=({criteria.min_level}, {criteria.max_level}), song_type={criteria.song_type}\n可选歌曲数量: {result.total_available}")
 
 
 # 注册随机歌曲命令
