@@ -24,11 +24,11 @@ class Settings(BaseSettings):
     class Config:
         env_file = ".env"
         env_file_encoding = "utf-8"
+        extra = "allow"
     
     def __init__(self, **kwargs):
         super().__init__(**kwargs)
         if self.SUPERUSER:
-            superusers_list = []
             try:
                 superusers_list = json.loads(self.SUPERUSER)
                 if isinstance(superusers_list, list):
@@ -37,5 +37,8 @@ class Settings(BaseSettings):
                     self.BOT_SUPERUSERS = [str(self.SUPERUSER)]
             except json.JSONDecodeError:
                 self.BOT_SUPERUSERS = [self.SUPERUSER]
+        
+        if self.BOT_SUPERUSERS == [""]:
+            self.BOT_SUPERUSERS = []
 
 settings = Settings()
