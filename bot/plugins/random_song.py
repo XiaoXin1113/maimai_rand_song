@@ -921,8 +921,10 @@ async def handle_search_song(bot: Bot, event: GroupMessageEvent, args: Message =
                 seen_titles.add(song.title)
                 unique_results.append((song, title_sim, alias_sim, max_sim))
 
-        # 如果有歌名100%匹配的结果且唯一，直接输出
-        if len(title_100_results) == 1 and len(unique_results) == 1:
+        if not unique_results:
+            await search_song.finish(f"No songs found containing \"{keyword}\"")
+
+        if len(unique_results) == 1:
             song = unique_results[0][0]
             msg = f"Search Result\n\n"
             msg += f"Title: {song.title}\n"
