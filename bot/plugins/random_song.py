@@ -990,7 +990,7 @@ async def handle_search_song(bot: Bot, event: GroupMessageEvent, args: Message =
             # 显示多个搜索结果
             msg = f"Found {len(unique_results)} related songs:\n\n"
             for i, (song, title_sim, alias_sim, max_sim) in enumerate(unique_results[:10], 1):
-                msg += f"{i}. {song.title} - {song.artist} (相似度: {max_sim:.2f})\n"
+                msg += f"{i}. {song.title} - {song.artist} (ID: {song.id}, 相似度: {max_sim:.2f})\n"
 
             if len(unique_results) > 10:
                 msg += f"\n... and {len(unique_results) - 10} more"
