@@ -10,6 +10,10 @@ import asyncio
 import secrets
 import hashlib
 import httpx
+import socket
+import subprocess
+import threading
+import time
 from pathlib import Path
 from datetime import datetime, timedelta
 
@@ -202,9 +206,6 @@ async def change_password(request: ChangePasswordRequest, req: Request, session_
     
     return {"message": "密码修改成功"}
 
-import socket
-import subprocess
-
 def check_bot_status():
     try:
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -231,16 +232,21 @@ def save_service_config(config: dict):
 def restart_service(service_name: str) -> bool:
     try:
         if service_name == "bot":
-            subprocess.run([
+            subprocess.Popen([
                 "ssh", "ubuntu@119.45.34.254",
                 "screen -S bot -X quit; sleep 1; screen -dmS bot bash -c 'cd ~/maimai_rand_song/bot && python3 main.py 2>&1 | tee /tmp/bot.log'"
-            ], check=True, capture_output=True)
+            ])
             return True
         elif service_name == "web":
-            subprocess.run([
-                "ssh", "ubuntu@119.45.34.254",
-                "screen -S web -X quit; sleep 1; screen -dmS web bash -c 'cd ~/maimai_rand_song && python3 -m web.backend.main 2>&1 | tee /tmp/web.log'"
-            ], check=True, capture_output=True)
+            def delayed_restart():
+                time.sleep(2)
+                subprocess.Popen([
+                    "ssh", "ubuntu@119.45.34.254",
+                    "screen -S web -X quit; sleep 1; screen -dmS web bash -c 'cd ~/maimai_rand_song && python3 -m web.backend.main 2>&1 | tee /tmp/web.log'"
+                ])
+            thread = threading.Thread(target=delayed_restart)
+            thread.daemon = True
+            thread.start()
             return True
         return False
     except:
