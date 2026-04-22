@@ -203,6 +203,7 @@ async def change_password(request: ChangePasswordRequest, req: Request, session_
     return {"message": "密码修改成功"}
 
 import socket
+import subprocess
 
 def check_bot_status():
     try:
@@ -214,10 +215,78 @@ def check_bot_status():
     except:
         return False
 
+SERVICE_CONFIG_PATH = PROJECT_ROOT / "config" / "service_config.json"
+
+def load_service_config():
+    if SERVICE_CONFIG_PATH.exists():
+        with open(SERVICE_CONFIG_PATH, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    return {"bot_enabled": True}
+
+def save_service_config(config: dict):
+    SERVICE_CONFIG_PATH.parent.mkdir(parents=True, exist_ok=True)
+    with open(SERVICE_CONFIG_PATH, 'w', encoding='utf-8') as f:
+        json.dump(config, f, indent=2, ensure_ascii=False)
+
+def restart_service(service_name: str) -> bool:
+    try:
+        if service_name == "bot":
+            subprocess.run([
+                "ssh", "ubuntu@119.45.34.254",
+                "screen -S bot -X quit; sleep 1; screen -dmS bot bash -c 'cd ~/maimai_rand_song/bot && python3 main.py 2>&1 | tee /tmp/bot.log'"
+            ], check=True, capture_output=True)
+            return True
+        elif service_name == "web":
+            subprocess.run([
+                "ssh", "ubuntu@119.45.34.254",
+                "screen -S web -X quit; sleep 1; screen -dmS web bash -c 'cd ~/maimai_rand_song && python3 -m web.backend.main 2>&1 | tee /tmp/web.log'"
+            ], check=True, capture_output=True)
+            return True
+        return False
+    except:
+        return False
+
 @app.get("/api/bot-status")
 async def get_bot_status():
     is_online = check_bot_status()
     return {"online": is_online}
+
+class ServiceEnabledRequest(BaseModel):
+    enabled: bool
+
+@app.get("/api/service/enabled")
+async def get_service_enabled(session_token: str = Depends(require_auth)):
+    config = load_service_config()
+    return {"bot_enabled": config.get("bot_enabled", True)}
+
+@app.post("/api/service/enabled")
+async def set_service_enabled(request: ServiceEnabledRequest, session_token: str = Depends(require_auth)):
+    config = load_service_config()
+    config["bot_enabled"] = request.enabled
+    save_service_config(config)
+
+    if not request.enabled:
+        try:
+            subprocess.run([
+                "ssh", "ubuntu@119.45.34.254",
+                "screen -S bot -X quit"
+            ], check=True, capture_output=True)
+        except:
+            pass
+    else:
+        restart_service("bot")
+
+    return {"message": f"Bot服务已{'启用' if request.enabled else '禁用'}", "bot_enabled": request.enabled}
+
+@app.post("/api/service/restart/{service_name}")
+async def restart_service_endpoint(service_name: str, session_token: str = Depends(require_auth)):
+    if service_name not in ["bot", "web"]:
+        raise HTTPException(status_code=400, detail="无效的服务名称")
+
+    success = restart_service(service_name)
+    if success:
+        return {"message": f"{service_name}服务重启成功"}
+    raise HTTPException(status_code=500, detail=f"{service_name}服务重启失败")
 
 @app.get("/api/version")
 async def get_version():

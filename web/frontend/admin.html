@@ -194,7 +194,7 @@
             gap: 15px;
             margin-top: 15px;
         }
-        .service-card {
+.service-card {
             background: #1a1a2e;
             padding: 20px;
             border-radius: 8px;
@@ -203,6 +203,45 @@
         .service-card h3 {
             margin-bottom: 10px;
             color: #aaa;
+        }
+        .toggle-switch {
+            position: relative;
+            display: inline-block;
+            width: 50px;
+            height: 26px;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #e74c3c;
+            transition: 0.3s;
+            border-radius: 26px;
+        }
+        .toggle-slider:before {
+            position: absolute;
+            content: "";
+            height: 20px;
+            width: 20px;
+            left: 3px;
+            bottom: 3px;
+            background-color: white;
+            transition: 0.3s;
+            border-radius: 50%;
+        }
+        .toggle-switch input:checked + .toggle-slider {
+            background-color: #27ae60;
+        }
+        .toggle-switch input:checked + .toggle-slider:before {
+            transform: translateX(24px);
         }
         .db-stats {
             display: grid;
@@ -329,10 +368,23 @@
                 <div class="service-card">
                     <h3>Bot 服务</h3>
                     <span class="status-badge status-online" id="botStatus">检测中...</span>
+                    <div style="margin-top: 15px;">
+                        <label class="toggle-switch">
+                            <input type="checkbox" id="botEnabledSwitch" onchange="toggleBotEnabled()">
+                            <span class="toggle-slider"></span>
+                        </label>
+                        <span id="botEnabledLabel" style="margin-left: 10px; color: #888;">启用中</span>
+                    </div>
+                    <div style="margin-top: 15px;">
+                        <button class="btn btn-warning btn-sm" onclick="restartService('bot')">🔄 重启Bot</button>
+                    </div>
                 </div>
                 <div class="service-card">
                     <h3>Web API</h3>
                     <span class="status-badge status-online" id="webStatus">检测中...</span>
+                    <div style="margin-top: 15px;">
+                        <button class="btn btn-warning btn-sm" onclick="restartService('web')">🔄 重启Web</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -556,7 +608,7 @@
                 document.getElementById('webStatus').textContent = '离线';
                 document.getElementById('webStatus').className = 'status-badge status-offline';
             }
-            
+
             try {
                 const botData = await fetchAPI('/bot-status');
                 if (botData.online) {
@@ -569,6 +621,58 @@
             } catch {
                 document.getElementById('botStatus').textContent = '离线';
                 document.getElementById('botStatus').className = 'status-badge status-offline';
+            }
+
+            try {
+                const enabledData = await fetchAPI('/service/enabled');
+                document.getElementById('botEnabledSwitch').checked = enabledData.bot_enabled;
+                document.getElementById('botEnabledLabel').textContent = enabledData.bot_enabled ? '启用中' : '已禁用';
+            } catch (error) {
+                console.error('Failed to load service enabled status:', error);
+            }
+        }
+
+        async function toggleBotEnabled() {
+            const enabled = document.getElementById('botEnabledSwitch').checked;
+            const label = document.getElementById('botEnabledLabel');
+
+            try {
+                const result = await fetchAPI('/service/enabled', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ enabled: enabled })
+                });
+                label.textContent = enabled ? '启用中' : '已禁用';
+                showToast(result.message);
+                setTimeout(() => checkServices(), 2000);
+            } catch (error) {
+                showToast('操作失败: ' + error.message, 'error');
+                document.getElementById('botEnabledSwitch').checked = !enabled;
+            }
+        }
+
+        async function restartService(serviceName) {
+            if (!confirm(`确定要重启 ${serviceName === 'bot' ? 'Bot' : 'Web'} 服务吗？`)) return;
+
+            const btn = event.target;
+            const originalText = btn.textContent;
+            btn.disabled = true;
+            btn.innerHTML = '<span class="loading-spinner"></span> 重启中...';
+
+            try {
+                const result = await fetchAPI(`/service/restart/${serviceName}`, {
+                    method: 'POST'
+                });
+                showToast(result.message);
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.textContent = originalText;
+                    checkServices();
+                }, 3000);
+            } catch (error) {
+                showToast('重启失败: ' + error.message, 'error');
+                btn.disabled = false;
+                btn.textContent = originalText;
             }
         }
 
