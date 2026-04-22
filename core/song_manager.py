@@ -7,6 +7,7 @@ from .models import Song, SelectionCriteria, SelectionResult, Difficulty, SongTy
 
 PROJECT_ROOT = Path(__file__).parent.parent
 DATABASE_PATH = PROJECT_ROOT / "data" / "songs_database.json"
+ALIAS_PATH = PROJECT_ROOT / "data" / "alias.json"
 
 
 class SongManager:
@@ -35,17 +36,52 @@ class SongManager:
             self.data_path = DATABASE_PATH
         self.songs: list[Song] = []
         self.last_loaded: Optional[datetime] = None
+        self.alias_map: dict[str, list[str]] = {}
         self.load_songs()
+
+    def load_aliases(self) -> None:
+        """从alias.json加载别名数据"""
+        self.alias_map = {}
+        if ALIAS_PATH.exists():
+            try:
+                with open(ALIAS_PATH, 'r', encoding='utf-8') as f:
+                    alias_data = json.load(f)
+                    for entry in alias_data:
+                        name = entry.get('name', '')
+                        aliases = entry.get('alias', [])
+                        if name and aliases:
+                            self.alias_map[name] = aliases
+            except Exception as e:
+                print(f"Failed to load alias data: {e}")
 
     def load_songs(self) -> None:
         """从数据库文件加载歌曲数据"""
+        self.load_aliases()
+
         if self.data_path.exists():
             with open(self.data_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
                 if "songs" in data:
-                    self.songs = [Song(**song) for song in data["songs"]]
+                    songs_data = data["songs"]
                 else:
-                    self.songs = [Song(**song) for song in data]
+                    songs_data = data
+
+                self.songs = []
+                for song_data in songs_data:
+                    song = Song(**song_data)
+
+                    if song.title in self.alias_map:
+                        song.alias = self.alias_map[song.title]
+                    elif song.title.lower() in self.alias_map:
+                        song.alias = self.alias_map[song.title.lower()]
+                    else:
+                        for key, aliases in self.alias_map.items():
+                            if key.lower() == song.title.lower():
+                                song.alias = aliases
+                                break
+
+                    self.songs.append(song)
+
             self.last_loaded = datetime.now()
         else:
             self.songs = []
