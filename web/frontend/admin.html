@@ -685,7 +685,7 @@
                 if (serviceName === 'bot') {
                     await pollBotStatus(10);
                 } else {
-                    await new Promise(resolve => setTimeout(resolve, 5000));
+                    await new Promise(resolve => setTimeout(resolve, 3000));
                 }
 
                 btn.disabled = false;
