@@ -72,51 +72,50 @@ def calculate_similarity(s1: str, s2: str) -> float:
 
 def find_song_by_keyword(keyword: str, min_similarity: float = 0.75):
     """根据关键词查找歌曲
-    
+
     Args:
         keyword: 关键词
         min_similarity: 最小相似度
-        
+
     Returns:
-        歌曲列表，每个元素为(song, title, similarity)
+        歌曲列表，每个元素为(song, title, title_similarity, alias_similarity, max_similarity)
     """
     keyword_lower = keyword.lower().strip()
     results = []
     seen_songs = set()
-    
+
     if keyword_lower.isdigit():
         chart_id = int(keyword_lower)
         for song in song_manager.get_all_songs():
-            # 检查谱面ID
             for chart in song.charts:
                 if chart.id == chart_id and song.id not in seen_songs:
-                    results.append((song, song.title, 1.0))
+                    results.append((song, song.title, 1.0, 0.0, 1.0))
                     seen_songs.add(song.id)
         return results
-    
+
     for song in song_manager.get_all_songs():
-        # 检查标题
         title_similarity = calculate_similarity(keyword_lower, song.title)
-        if title_similarity >= min_similarity:
-            results.append((song, song.title, title_similarity))
-        
-        # 检查别名
+
+        alias_similarity = 0.0
         for alias in song.alias:
-            alias_similarity = calculate_similarity(keyword_lower, alias)
-            if alias_similarity >= min_similarity:
-                results.append((song, song.title, alias_similarity))
-    
-    # 按相似度排序，降序
-    results.sort(key=lambda x: x[2], reverse=True)
-    
-    # 去重，保留相似度最高的
+            sim = calculate_similarity(keyword_lower, alias)
+            if sim > alias_similarity:
+                alias_similarity = sim
+
+        max_similarity = max(title_similarity, alias_similarity)
+
+        if max_similarity >= min_similarity:
+            results.append((song, song.title, title_similarity, alias_similarity, max_similarity))
+
+    results.sort(key=lambda x: x[4], reverse=True)
+
     unique_results = []
     seen_songs = set()
-    for song, title, similarity in results:
+    for song, title, title_sim, alias_sim, max_sim in results:
         if song.id not in seen_songs:
             seen_songs.add(song.id)
-            unique_results.append((song, title, similarity))
-    
+            unique_results.append((song, title, title_sim, alias_sim, max_sim))
+
     return unique_results
 
 async def check_blacklist(event: Event) -> bool:
@@ -327,18 +326,19 @@ async def handle_check_score(event: Event, args: Message = CommandArg()):
         results = find_song_by_keyword(query_value, min_similarity=0.5)
         if not results:
             await check_score.finish(f"未找到匹配的歌曲")
-    
-    # 处理多个结果
-    if len(results) > 1:
+
+    title_100_results = [r for r in results if r[2] == 1.0]
+
+    if len(results) > 1 and not (len(title_100_results) == 1 and len(results) == 1):
         msg = f"找到 {len(results)} 个匹配结果:\n\n"
-        for i, (song, title, similarity) in enumerate(results[:10], 1):
-            msg += f"{i}. {title} (ID: {song.id}, 相似度: {similarity:.2f})\n"
+        for i, (song, title, title_sim, alias_sim, max_sim) in enumerate(results[:10], 1):
+            msg += f"{i}. {title} (ID: {song.id}, 相似度: {max_sim:.2f})\n"
         if len(results) > 10:
             msg += f"... 还有 {len(results) - 10} 个结果"
         await check_score.finish(msg)
-    
-    # 处理单个结果
-    song, song_title, _ = results[0]
+
+    # 处理结果
+    song, song_title, _, _, _ = results[0]
     
     # 根据查询类型和谱面类型来确定target_type
     found_chart = None

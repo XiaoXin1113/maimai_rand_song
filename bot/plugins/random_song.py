@@ -816,7 +816,6 @@ async def handle_search_song(bot: Bot, event: GroupMessageEvent, args: Message =
             for chart_type in [SongType.STANDARD, SongType.DX, SongType.UTAGE]:
                 if chart_type.value in chart_groups:
                     type_str = TYPE_NAMES.get(chart_type, chart_type.value)
-                    # 只显示一次ID，在类型后面
                     chart_id = chart_groups[chart_type.value][0].id
                     msg += f"\n[{type_str}] (ID: {chart_id})\n"
                     for c in sorted(chart_groups[chart_type.value], key=lambda c: list(Difficulty).index(c.difficulty)):
@@ -824,8 +823,7 @@ async def handle_search_song(bot: Bot, event: GroupMessageEvent, args: Message =
                         level_display = c.level
                         if c.internal_level:
                             level_display += f"({c.internal_level:.1f})"
-                        msg += f"  {diff_str}: {level_display}\n"
-                        # 显示音符数量
+                        msg += f"  {diff_str}: {level_display} (ID: {c.id})\n"
                         if c.note_counts:
                             msg += f"    Notes: {c.note_counts.total} (Tap: {c.note_counts.tap}, Hold: {c.note_counts.hold}, Slide: {c.note_counts.slide}, Touch: {c.note_counts.touch}, Break: {c.note_counts.break_note})\n"
             
@@ -904,131 +902,68 @@ async def handle_search_song(bot: Bot, event: GroupMessageEvent, args: Message =
 
             # 置信度阈值设为50%
             if max_similarity >= 0.5:
-                results.append((song, max_similarity, title_similarity))
+                results.append((song, title_similarity, alias_similarity, max_similarity))
 
         # 按相似度排序
-        results.sort(key=lambda x: (x[1], x[2]), reverse=True)
+        results.sort(key=lambda x: x[3], reverse=True)
 
         if not results:
             await search_song.finish(f"No songs found containing \"{keyword}\"")
 
+        # 检查是否有歌名100%匹配的结果
+        title_100_results = [r for r in results if r[1] == 1.0]
+
         # 去重，确保每个歌曲只显示一次
-        unique_songs = []
+        unique_results = []
         seen_titles = set()
-        for song, similarity, title_sim in results:
+        for song, title_sim, alias_sim, max_sim in results:
             if song.title not in seen_titles:
                 seen_titles.add(song.title)
-                unique_songs.append((song, similarity, title_sim))
+                unique_results.append((song, title_sim, alias_sim, max_sim))
 
-        # 检查是否有歌名100%匹配的歌曲，且没有其他歌名100%匹配
-        perfect_title_match = None
-        title_100_count = sum(1 for _, _, ts in unique_songs if ts == 1.0)
-
-        if title_100_count == 1:
-            for song, similarity, title_sim in unique_songs:
-                if title_sim == 1.0:
-                    perfect_title_match = song
-                    break
-
-        if perfect_title_match:
-            song = perfect_title_match
+        # 如果有歌名100%匹配的结果且唯一，直接输出
+        if len(title_100_results) == 1 and len(unique_results) == 1:
+            song = unique_results[0][0]
             msg = f"Search Result\n\n"
             msg += f"Title: {song.title}\n"
             msg += f"Artist: {song.artist}\n"
-
+            
             if song.genre:
                 msg += f"Genre: {song.genre}\n"
-
+            
             msg += f"BPM: {song.bpm}\n"
-
+            
             # 获取歌曲版本信息
             first_version = song.version
             if not first_version and song.charts:
                 versions = [c.version for c in song.charts if c.version]
                 if versions:
                     first_version = versions[0]
-
+            
             if first_version:
                 msg += f"Version: {first_version}\n"
-
+            
             # 显示谱面列表
             msg += f"\nDifficulty List:\n"
-
+            
             chart_groups = {}
             for c in song.charts:
                 key = c.type.value
                 if key not in chart_groups:
                     chart_groups[key] = []
                 chart_groups[key].append(c)
-
+            
             for chart_type in [SongType.STANDARD, SongType.DX, SongType.UTAGE]:
                 if chart_type.value in chart_groups:
                     type_str = TYPE_NAMES.get(chart_type, chart_type.value)
-                    msg += f"\n[{type_str}]\n"
+                    chart_id = chart_groups[chart_type.value][0].id
+                    msg += f"\n[{type_str}] (ID: {chart_id})\n"
                     for c in sorted(chart_groups[chart_type.value], key=lambda c: list(Difficulty).index(c.difficulty)):
                         diff_str = DIFFICULTY_NAMES.get(c.difficulty, c.difficulty.value)
                         level_display = c.level
                         if c.internal_level:
                             level_display += f"({c.internal_level:.1f})"
-                        chart_id_str = f" (ID: {c.id})" if c.id else ""
-                        msg += f"  {diff_str}: {level_display}{chart_id_str}\n"
-
-            # 显示别名
-            if song.alias and len(song.alias) > 0:
-                msg += f"\nAlias: {', '.join(song.alias)}\n"
-
-            # 发送消息（包含图片）
-            try:
-                if song.image_url:
-                    cover_url = get_cover_url(song.image_url)
-                    await search_song.send(Message(msg.strip() + MessageSegment.image(cover_url)))
-                else:
-                    await search_song.send(msg.strip())
-            except Exception:
-                await search_song.send(msg.strip())
-        elif len(unique_songs) == 1:
-            # 显示单个搜索结果
-            song = unique_songs[0][0]
-            msg = f"Search Result\n\n"
-            msg += f"Title: {song.title}\n"
-            msg += f"Artist: {song.artist}\n"
-
-            if song.genre:
-                msg += f"Genre: {song.genre}\n"
-
-            msg += f"BPM: {song.bpm}\n"
-
-            # 获取歌曲版本信息
-            first_version = song.version
-            if not first_version and song.charts:
-                versions = [c.version for c in song.charts if c.version]
-                if versions:
-                    first_version = versions[0]
-
-            if first_version:
-                msg += f"Version: {first_version}\n"
-
-            # 显示谱面列表
-            msg += f"\nDifficulty List:\n"
-
-            chart_groups = {}
-            for c in song.charts:
-                key = c.type.value
-                if key not in chart_groups:
-                    chart_groups[key] = []
-                chart_groups[key].append(c)
-
-            for chart_type in [SongType.STANDARD, SongType.DX, SongType.UTAGE]:
-                if chart_type.value in chart_groups:
-                    type_str = TYPE_NAMES.get(chart_type, chart_type.value)
-                    msg += f"\n[{type_str}]\n"
-                    for c in sorted(chart_groups[chart_type.value], key=lambda c: list(Difficulty).index(c.difficulty)):
-                        diff_str = DIFFICULTY_NAMES.get(c.difficulty, c.difficulty.value)
-                        level_display = c.level
-                        if c.internal_level:
-                            level_display += f"({c.internal_level:.1f})"
-                        chart_id_str = f" (ID: {c.id})" if c.id else ""
-                        msg += f"  {diff_str}: {level_display}{chart_id_str}\n"
+                        msg += f"  {diff_str}: {level_display} (ID: {c.id})\n"
 
             # 显示别名
             if song.alias and len(song.alias) > 0:
@@ -1045,15 +980,15 @@ async def handle_search_song(bot: Bot, event: GroupMessageEvent, args: Message =
                 await search_song.send(msg.strip())
         else:
             # 显示多个搜索结果
-            msg = f"Found {len(unique_songs)} related songs:\n\n"
-            for i, song in enumerate(unique_songs[:10], 1):
-                msg += f"{i}. {song.title} - {song.artist}\n"
-            
-            if len(unique_songs) > 10:
-                msg += f"\n... and {len(unique_songs) - 10} more"
-            
+            msg = f"Found {len(unique_results)} related songs:\n\n"
+            for i, (song, title_sim, alias_sim, max_sim) in enumerate(unique_results[:10], 1):
+                msg += f"{i}. {song.title} - {song.artist} (相似度: {max_sim:.2f})\n"
+
+            if len(unique_results) > 10:
+                msg += f"\n... and {len(unique_results) - 10} more"
+
             msg += "\n\n提示: 若要查看特定歌曲的详细信息，请使用 /search <歌曲名>"
-            
+
             await search_song.finish(msg.strip())
 
 
