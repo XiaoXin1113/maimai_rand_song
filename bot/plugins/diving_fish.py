@@ -5,11 +5,9 @@ sys.path.insert(0, str(Path(__file__).parent.parent.parent))
 from nonebot import on_command
 from nonebot.adapters.onebot.v11 import Bot, GroupMessageEvent, PrivateMessageEvent, Message, Event, MessageSegment
 from nonebot.params import CommandArg
-from core import get_diving_fish_client, SongManager, Difficulty, SongType
+from core import get_diving_fish_client, SongManager, Difficulty, SongType, song_manager
 from core.user_tokens import user_token_manager
 from core.group_blacklist import group_blacklist
-
-song_manager = SongManager()
 
 DIFFICULTY_INDEX = {
     "basic": 0,
@@ -27,34 +25,104 @@ DIFFICULTY_NAMES = {
     4: "Re:Master"
 }
 
-def find_song_by_keyword(keyword: str):
+def calculate_similarity(s1: str, s2: str) -> float:
+    """计算两个字符串的相似度
+    
+    Args:
+        s1: 第一个字符串
+        s2: 第二个字符串
+        
+    Returns:
+        相似度，范围0-1
+    """
+    s1 = s1.lower()
+    s2 = s2.lower()
+    
+    # 完全匹配
+    if s1 == s2:
+        return 1.0
+    
+    # 子串匹配
+    if s1 in s2 or s2 in s1:
+        return 0.8 + (0.2 * min(len(s1), len(s2)) / max(len(s1), len(s2)))
+    
+    # Levenshtein距离匹配
+    def levenshtein_distance(text1, text2):
+        if len(text1) < len(text2):
+            return levenshtein_distance(text2, text1)
+        if len(text2) == 0:
+            return len(text1)
+        previous_row = range(len(text2) + 1)
+        for i, c1 in enumerate(text1):
+            current_row = [i + 1]
+            for j, c2 in enumerate(text2):
+                insertions = previous_row[j + 1] + 1
+                deletions = current_row[j] + 1
+                substitutions = previous_row[j] + (c1 != c2)
+                current_row.append(min(insertions, deletions, substitutions))
+            previous_row = current_row
+        return previous_row[-1]
+    
+    distance = levenshtein_distance(s1, s2)
+    max_len = max(len(s1), len(s2))
+    if max_len == 0:
+        return 0.0
+    similarity = 1.0 - (distance / max_len)
+    return similarity
+
+def find_song_by_keyword(keyword: str, min_similarity: float = 0.75):
+    """根据关键词查找歌曲
+    
+    Args:
+        keyword: 关键词
+        min_similarity: 最小相似度
+        
+    Returns:
+        歌曲列表，每个元素为(song, title, similarity)
+    """
     keyword_lower = keyword.lower().strip()
+    results = []
+    seen_songs = set()
     
     if keyword_lower.isdigit():
-        song_id = int(keyword_lower)
+        chart_id = int(keyword_lower)
         for song in song_manager.get_all_songs():
-            if song.id == song_id:
-                return song, song.title
-        return None, None
+            # 检查谱面ID
+            for chart in song.charts:
+                if chart.id == chart_id and song.id not in seen_songs:
+                    results.append((song, song.title, 1.0))
+                    seen_songs.add(song.id)
+        return results
     
     for song in song_manager.get_all_songs():
-        if keyword_lower == song.title.lower():
-            return song, song.title
-        if keyword_lower in song.title.lower():
-            return song, song.title
+        # 检查标题
+        title_similarity = calculate_similarity(keyword_lower, song.title)
+        if title_similarity >= min_similarity:
+            results.append((song, song.title, title_similarity))
+        
+        # 检查别名
         for alias in song.alias:
-            if keyword_lower == alias.lower():
-                return song, song.title
-            if keyword_lower in alias.lower():
-                return song, song.title
+            alias_similarity = calculate_similarity(keyword_lower, alias)
+            if alias_similarity >= min_similarity:
+                results.append((song, song.title, alias_similarity))
     
-    return None, None
+    # 按相似度排序，降序
+    results.sort(key=lambda x: x[2], reverse=True)
+    
+    # 去重，保留相似度最高的
+    unique_results = []
+    seen_songs = set()
+    for song, title, similarity in results:
+        if song.id not in seen_songs:
+            seen_songs.add(song.id)
+            unique_results.append((song, title, similarity))
+    
+    return unique_results
 
 async def check_blacklist(event: Event) -> bool:
     if isinstance(event, GroupMessageEvent):
         return not group_blacklist.is_blocked(event.group_id)
     return True
-
 bind_token = on_command("bind", aliases={"绑定"}, priority=5, block=True, rule=check_blacklist)
 
 @bind_token.handle()
@@ -63,12 +131,29 @@ async def handle_bind_token(event: Event, args: Message = CommandArg()):
     arg_text = args.extract_plain_text().strip()
     print(f"[DEBUG] bind called with arg_text: {arg_text[:20]}...")
     
+    # 检查是否有 help 参数（只检测紧跟命令的第一个参数）
+    parts = arg_text.split() if arg_text else []
+    if parts and parts[0].lower() == "help":
+        help_msg = "绑定命令帮助\n\n"
+        help_msg += "使用方法: /bind <Import-Token>\n\n"
+        help_msg += "说明:\n"
+        help_msg += "1. 请在水鱼查分器官网生成 Import-Token\n"
+        help_msg += "2. 登录水鱼查分器: https://www.diving-fish.com/maimaidx/prober/\n"
+        help_msg += "3. 点击 '编辑个人资料'\n"
+        help_msg += "4. 找到 '生成 Import-Token' 按钮并点击\n"
+        help_msg += "5. 复制生成的 Import-Token\n"
+        help_msg += "6. 使用 /bind <Import-Token> 命令绑定账号\n\n"
+        help_msg += "示例:\n"
+        help_msg += "/bind 1234567890abcdef1234567890abcdef\n"
+        await bind_token.finish(help_msg)
+    
     if not arg_text:
         await bind_token.finish(
             "Usage: bind <Import-Token>\n"
             "请在水鱼查分器官网生成 Import-Token:\n"
             "https://www.diving-fish.com/maimaidx/prober/\n"
-            "登录后 -> 编辑个人资料 -> 生成 Import-Token"
+            "登录后 -> 编辑个人资料 -> 生成 Import-Token\n"
+            "使用 /bind help 查看详细帮助"
         )
     
     import_token = arg_text.split()[0]
@@ -90,8 +175,21 @@ async def handle_bind_token(event: Event, args: Message = CommandArg()):
 unbind_token = on_command("unbind", aliases={"解绑"}, priority=5, block=True, rule=check_blacklist)
 
 @unbind_token.handle()
-async def handle_unbind_token(event: Event):
+async def handle_unbind_token(event: Event, args: Message = CommandArg()):
     user_id = event.user_id
+    
+    # 检查是否有 help 参数（只检测紧跟命令的第一个参数）
+    arg_text = args.extract_plain_text().strip()
+    parts = arg_text.split() if arg_text else []
+    if parts and parts[0].lower() == "help":
+        help_msg = "解绑命令帮助\n\n"
+        help_msg += "使用方法: /unbind\n\n"
+        help_msg += "说明:\n"
+        help_msg += "- 该命令会解除您当前绑定的水鱼账号\n"
+        help_msg += "- 解绑后需要重新绑定才能使用查分功能\n\n"
+        help_msg += "示例:\n"
+        help_msg += "/unbind - 解除当前绑定的水鱼账号\n"
+        await unbind_token.finish(help_msg)
     
     if user_token_manager.remove_token(user_id):
         await unbind_token.finish("已解除水鱼账号绑定")
@@ -117,6 +215,24 @@ async def handle_check_score(event: Event, args: Message = CommandArg()):
     
     arg_text = args.extract_plain_text().strip()
     
+    # 检查是否有 help 参数（只检测紧跟命令的第一个参数）
+    parts = arg_text.split() if arg_text else []
+    if parts and parts[0].lower() == "help":
+        help_msg = "查分命令帮助\n\n"
+        help_msg += "使用方法: /score [参数]\n\n"
+        help_msg += "参数说明:\n"
+        help_msg += "- -id <谱面ID> - 按谱面ID查询\n"
+        help_msg += "- -n <歌曲名> - 按歌曲名查询\n"
+        help_msg += "- -d <难度> - 指定难度 (basic, advanced, expert, master, remaster)\n"
+        help_msg += "- 难度参数: basic/bs/b, advanced/adv/a, expert/exp/e, master/mas/m, remaster/rem/r\n"
+        help_msg += "- 类型参数: dx, std\n\n"
+        help_msg += "示例:\n"
+        help_msg += "/score Yorugao - 查询歌曲 'Yorugao' 的 Master 难度成绩\n"
+        help_msg += "/score -id 11307 - 查询谱面ID为 11307 的 Master 难度成绩\n"
+        help_msg += "/score -id 11307 -d expert - 查询谱面ID为 11307 的 Expert 难度成绩\n"
+        help_msg += "/score -n Yorugao - 查询歌曲 'Yorugao' 的成绩\n"
+        await check_score.finish(help_msg)
+    
     if not arg_text:
         player_info = await client.get_player_info(user_token.diving_fish_username, user_token.import_token)
         if player_info:
@@ -126,19 +242,52 @@ async def handle_check_score(event: Event, args: Message = CommandArg()):
             msg += f"Rating: {player_info.rating}\n"
             if player_info.plate:
                 msg += f"牌子: {player_info.plate}\n"
-            msg += f"\n使用 score <歌曲名> 查询单曲成绩"
+            msg += f"\n使用 score <歌曲名> 查询单曲成绩\n"
+            msg += f"使用 score -id <谱面id> 查询指定ID的谱面成绩\n"
+            msg += f"使用 score -n <歌曲名> 查询指定歌名的成绩\n"
+            msg += f"使用 score help 查看详细帮助\n"
             await check_score.finish(msg)
         else:
             await check_score.finish("获取玩家信息失败，请重新绑定")
     
-    keyword = arg_text
+    parts = arg_text.split()
+    query_type = "auto"
+    query_value = ""
     target_difficulty = "master"
     target_type = "DX"
     
-    parts = keyword.split()
-    for part in parts:
+    # 解析参数
+    i = 0
+    while i < len(parts):
+        part = parts[i]
         part_lower = part.lower()
-        if part_lower in ["basic", "bs", "b"]:
+        
+        if part == "-n":
+            query_type = "name"
+            # 取后续所有字符作为歌名
+            query_value = " ".join(parts[i+1:])
+            break
+        elif part == "-id":
+            query_type = "id"
+            if i + 1 < len(parts):
+                query_value = parts[i+1]
+                i += 1
+        elif part == "-d":
+            # 指定难度
+            if i + 1 < len(parts):
+                difficulty_arg = parts[i+1].lower()
+                if difficulty_arg in ["basic", "bs", "b"]:
+                    target_difficulty = "basic"
+                elif difficulty_arg in ["advanced", "adv", "a"]:
+                    target_difficulty = "advanced"
+                elif difficulty_arg in ["expert", "exp", "e"]:
+                    target_difficulty = "expert"
+                elif difficulty_arg in ["master", "mas", "m"]:
+                    target_difficulty = "master"
+                elif difficulty_arg in ["remaster", "rem", "r"]:
+                    target_difficulty = "remaster"
+                i += 1
+        elif part_lower in ["basic", "bs", "b"]:
             target_difficulty = "basic"
         elif part_lower in ["advanced", "adv", "a"]:
             target_difficulty = "advanced"
@@ -150,33 +299,86 @@ async def handle_check_score(event: Event, args: Message = CommandArg()):
             target_difficulty = "remaster"
         elif part_lower in ["dx", "std"]:
             target_type = "DX" if part_lower == "dx" else "SD"
+        else:
+            # 自动模式，根据参数类型判断
+            if query_type == "auto":
+                query_value = arg_text
+        i += 1
     
-    song_keyword = keyword
-    for part in parts:
-        part_lower = part.lower()
-        if part_lower in ["basic", "bs", "b", "advanced", "adv", "a", "expert", "exp", "e", 
-                          "master", "mas", "m", "remaster", "rem", "r", "dx", "std"]:
-            song_keyword = song_keyword.replace(part, "").strip()
+    # 处理自动模式
+    if query_type == "auto":
+        if query_value.isdigit():
+            query_type = "id"
+        else:
+            query_type = "name"
     
-    song, song_title = find_song_by_keyword(song_keyword)
-    if not song:
-        await check_score.finish(f"未找到歌曲 \"{song_keyword}\"")
-    
-    if song.type == SongType.DX:
-        target_type = "DX"
+    # 执行查询
+    if query_type == "id":
+        # 按ID查询
+        try:
+            chart_id = int(query_value)
+            results = find_song_by_keyword(str(chart_id))
+            if not results:
+                await check_score.finish(f"未找到ID为 {chart_id} 的谱面")
+        except ValueError:
+            await check_score.finish("请输入有效的谱面ID")
     else:
-        target_type = "SD"
+        # 按歌名查询
+        results = find_song_by_keyword(query_value, min_similarity=0.5)
+        if not results:
+            await check_score.finish(f"未找到匹配的歌曲")
     
-    score = await client.get_song_score_by_name(
+    # 处理多个结果
+    if len(results) > 1:
+        msg = f"找到 {len(results)} 个匹配结果:\n\n"
+        for i, (song, title, similarity) in enumerate(results[:10], 1):
+            msg += f"{i}. {title} (ID: {song.id}, 相似度: {similarity:.2f})\n"
+        if len(results) > 10:
+            msg += f"... 还有 {len(results) - 10} 个结果"
+        await check_score.finish(msg)
+    
+    # 处理单个结果
+    song, song_title, _ = results[0]
+    
+    # 根据查询类型和谱面类型来确定target_type
+    found_chart = None
+    if query_type == "id":
+        # 按ID查询时，需要找到匹配ID的谱面的类型
+        chart_id = int(query_value)
+        for chart in song.charts:
+            if chart.id == chart_id:
+                found_chart = chart
+                break
+        if found_chart:
+            target_type = "DX" if found_chart.type == SongType.DX else "SD"
+        else:
+            # 如果没找到匹配的谱面，使用歌曲的默认类型
+            target_type = "DX" if song.type == SongType.DX else "SD"
+    else:
+        # 按歌名查询时，使用歌曲的类型
+        target_type = "DX" if song.type == SongType.DX else "SD"
+    
+    # 根据查询类型获取谱面ID
+    if query_type == "id":
+        chart_id = int(query_value)
+    else:
+        # 按歌名查询时，无法确定谱面ID，使用第一个谱面的ID
+        chart_id = song.charts[0].id if song.charts else None
+        if chart_id is None:
+            await check_score.finish("该歌曲没有可查询的谱面")
+    
+    print(f"[DEBUG] 调用 get_song_score_by_id: username={user_token.diving_fish_username}, chart_id={chart_id}, difficulty={target_difficulty}")
+    score = await client.get_song_score_by_id(
         user_token.diving_fish_username,
-        song_title,
+        chart_id,
         target_difficulty,
-        target_type,
-        user_token.import_token
+        user_token.import_token,
+        song_manager
     )
+    print(f"[DEBUG] get_song_score_by_id 返回: {score}")
     
     if not score:
-        await check_score.finish(f"未找到歌曲 \"{song_title}\" 的成绩记录")
+        await check_score.finish(f"未找到歌曲 '{song_title}' 的成绩记录")
     
     msg = f"成绩查询结果\n\n"
     msg += f"歌曲: {score.title}\n"
