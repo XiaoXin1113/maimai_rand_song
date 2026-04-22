@@ -644,11 +644,28 @@
                 });
                 label.textContent = enabled ? '启用中' : '已禁用';
                 showToast(result.message);
-                setTimeout(() => checkServices(), 2000);
+
+                if (enabled) {
+                    await pollBotStatus(10);
+                }
+                checkServices();
             } catch (error) {
                 showToast('操作失败: ' + error.message, 'error');
                 document.getElementById('botEnabledSwitch').checked = !enabled;
             }
+        }
+
+        async function pollBotStatus(maxAttempts = 10) {
+            for (let i = 0; i < maxAttempts; i++) {
+                await new Promise(resolve => setTimeout(resolve, 1000));
+                try {
+                    const botData = await fetchAPI('/bot-status');
+                    if (botData.online) {
+                        return true;
+                    }
+                } catch (e) {}
+            }
+            return false;
         }
 
         async function restartService(serviceName) {
@@ -664,11 +681,16 @@
                     method: 'POST'
                 });
                 showToast(result.message);
-                setTimeout(() => {
-                    btn.disabled = false;
-                    btn.textContent = originalText;
-                    checkServices();
-                }, 3000);
+
+                if (serviceName === 'bot') {
+                    await pollBotStatus(10);
+                } else {
+                    await new Promise(resolve => setTimeout(resolve, 5000));
+                }
+
+                btn.disabled = false;
+                btn.textContent = originalText;
+                checkServices();
             } catch (error) {
                 showToast('重启失败: ' + error.message, 'error');
                 btn.disabled = false;

@@ -229,21 +229,26 @@ def save_service_config(config: dict):
     with open(SERVICE_CONFIG_PATH, 'w', encoding='utf-8') as f:
         json.dump(config, f, indent=2, ensure_ascii=False)
 
-def restart_service(service_name: str) -> bool:
+def restart_service(service_name: str, use_background=False) -> bool:
     try:
         if service_name == "bot":
-            subprocess.Popen([
-                "ssh", "ubuntu@119.45.34.254",
-                "screen -S bot -X quit; sleep 1; screen -dmS bot bash -c 'cd ~/maimai_rand_song/bot && python3 main.py 2>&1 | tee /tmp/bot.log'"
-            ])
+            if use_background:
+                def delayed_start():
+                    time.sleep(1)
+                    cmd = 'screen -S bot -X quit; sleep 1; screen -dmS bot bash -c "cd ~/maimai_rand_song/bot && python3 main.py 2>&1 | tee /tmp/bot.log"'
+                    subprocess.Popen(cmd, shell=True)
+                thread = threading.Thread(target=delayed_start)
+                thread.daemon = True
+                thread.start()
+            else:
+                cmd = 'screen -S bot -X quit; sleep 1; screen -dmS bot bash -c "cd ~/maimai_rand_song/bot && python3 main.py 2>&1 | tee /tmp/bot.log"'
+                subprocess.Popen(cmd, shell=True)
             return True
         elif service_name == "web":
             def delayed_restart():
                 time.sleep(2)
-                subprocess.Popen([
-                    "ssh", "ubuntu@119.45.34.254",
-                    "screen -S web -X quit; sleep 1; screen -dmS web bash -c 'cd ~/maimai_rand_song && python3 -m web.backend.main 2>&1 | tee /tmp/web.log'"
-                ])
+                cmd = 'screen -S web -X quit; sleep 1; screen -dmS web bash -c "cd ~/maimai_rand_song && python3 -m web.backend.main 2>&1 | tee /tmp/web.log"'
+                subprocess.Popen(cmd, shell=True)
             thread = threading.Thread(target=delayed_restart)
             thread.daemon = True
             thread.start()
@@ -273,14 +278,12 @@ async def set_service_enabled(request: ServiceEnabledRequest, session_token: str
 
     if not request.enabled:
         try:
-            subprocess.run([
-                "ssh", "ubuntu@119.45.34.254",
-                "screen -S bot -X quit"
-            ], check=True, capture_output=True)
+            cmd = 'screen -S bot -X quit'
+            subprocess.Popen(cmd, shell=True)
         except:
             pass
     else:
-        restart_service("bot")
+        restart_service("bot", use_background=True)
 
     return {"message": f"Bot服务已{'启用' if request.enabled else '禁用'}", "bot_enabled": request.enabled}
 
