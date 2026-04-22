@@ -200,7 +200,7 @@ check_score = on_command("score", aliases={"查分"}, priority=5, block=True, ru
 @check_score.handle()
 async def handle_check_score(event: Event, args: Message = CommandArg()):
     user_id = event.user_id
-    
+
     user_token = user_token_manager.get_token(user_id)
     if not user_token:
         await check_score.finish(
@@ -341,7 +341,7 @@ async def handle_check_score(event: Event, args: Message = CommandArg()):
         song, song_title, _, _, _ = next(r for r in results if r[2] == 1.0)
     else:
         song, song_title, _, _, _ = results[0]
-    
+
     # 根据查询类型和谱面类型来确定target_type
     found_chart = None
     if query_type == "id":
@@ -385,7 +385,7 @@ async def handle_check_score(event: Event, args: Message = CommandArg()):
     msg = f"成绩查询结果\n\n"
     msg += f"歌曲: {score.title}\n"
     msg += f"类型: {score.type}\n"
-    msg += f"难度: {DIFFICULTY_NAMES.get(score.level_index, score.level)} {score.level} (ID: {score.chart_id})\n"
+    msg += f"难度: {DIFFICULTY_NAMES.get(score.level_index, score.level)} {score.level} (ID: {score.song_id})\n"
     msg += f"达成率: {score.achievement:.4f}%\n"
     msg += f"DX Score: {score.dx_score} / {score.dx_score_max} ({score.dx_rating:.1f}%)\n"
     
