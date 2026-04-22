@@ -823,7 +823,7 @@ async def handle_search_song(bot: Bot, event: GroupMessageEvent, args: Message =
                         level_display = c.level
                         if c.internal_level:
                             level_display += f"({c.internal_level:.1f})"
-                        msg += f"  {diff_str}: {level_display} (ID: {c.id})\n"
+                        msg += f"  {diff_str}: {level_display}\n"
                         if c.note_counts:
                             msg += f"    Notes: {c.note_counts.total} (Tap: {c.note_counts.tap}, Hold: {c.note_counts.hold}, Slide: {c.note_counts.slide}, Touch: {c.note_counts.touch}, Break: {c.note_counts.break_note})\n"
             
@@ -924,8 +924,14 @@ async def handle_search_song(bot: Bot, event: GroupMessageEvent, args: Message =
         if not unique_results:
             await search_song.finish(f"No songs found containing \"{keyword}\"")
 
-        if len(unique_results) == 1:
-            song = unique_results[0][0]
+        has_100_title_match = any(r[1] == 1.0 for r in unique_results)
+
+        if len(unique_results) == 1 or has_100_title_match:
+            if has_100_title_match:
+                song_entry = next(r for r in unique_results if r[1] == 1.0)
+            else:
+                song_entry = unique_results[0]
+            song = song_entry[0]
             msg = f"Search Result\n\n"
             msg += f"Title: {song.title}\n"
             msg += f"Artist: {song.artist}\n"
@@ -965,7 +971,7 @@ async def handle_search_song(bot: Bot, event: GroupMessageEvent, args: Message =
                         level_display = c.level
                         if c.internal_level:
                             level_display += f"({c.internal_level:.1f})"
-                        msg += f"  {diff_str}: {level_display} (ID: {c.id})\n"
+                        msg += f"  {diff_str}: {level_display}\n"
 
             # 显示别名
             if song.alias and len(song.alias) > 0:

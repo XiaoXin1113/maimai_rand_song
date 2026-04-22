@@ -327,9 +327,9 @@ async def handle_check_score(event: Event, args: Message = CommandArg()):
         if not results:
             await check_score.finish(f"未找到匹配的歌曲")
 
-    title_100_results = [r for r in results if r[2] == 1.0]
+    has_100_title_match = any(r[2] == 1.0 for r in results)
 
-    if len(results) > 1 and not (len(title_100_results) == 1 and len(results) == 1):
+    if len(results) > 1 and not has_100_title_match:
         msg = f"找到 {len(results)} 个匹配结果:\n\n"
         for i, (song, title, title_sim, alias_sim, max_sim) in enumerate(results[:10], 1):
             msg += f"{i}. {title} (ID: {song.id}, 相似度: {max_sim:.2f})\n"
@@ -337,8 +337,10 @@ async def handle_check_score(event: Event, args: Message = CommandArg()):
             msg += f"... 还有 {len(results) - 10} 个结果"
         await check_score.finish(msg)
 
-    # 处理结果
-    song, song_title, _, _, _ = results[0]
+    if has_100_title_match:
+        song, song_title, _, _, _ = next(r for r in results if r[2] == 1.0)
+    else:
+        song, song_title, _, _, _ = results[0]
     
     # 根据查询类型和谱面类型来确定target_type
     found_chart = None
