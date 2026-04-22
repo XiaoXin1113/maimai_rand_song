@@ -385,7 +385,7 @@ async def handle_check_score(event: Event, args: Message = CommandArg()):
     msg = f"成绩查询结果\n\n"
     msg += f"歌曲: {score.title}\n"
     msg += f"类型: {score.type}\n"
-    msg += f"难度: {DIFFICULTY_NAMES.get(score.level_index, score.level)} {score.level}\n"
+    msg += f"难度: {DIFFICULTY_NAMES.get(score.level_index, score.level)} {score.level} (ID: {score.chart_id})\n"
     msg += f"达成率: {score.achievement:.4f}%\n"
     msg += f"DX Score: {score.dx_score} / {score.dx_score_max} ({score.dx_rating:.1f}%)\n"
     
