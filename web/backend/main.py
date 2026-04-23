@@ -236,20 +236,28 @@ def restart_service(service_name: str) -> bool:
             subprocess.Popen(cmd, shell=True)
             return True
         elif service_name == "web":
-            def delayed_restart():
-                import time
-                time.sleep(3)
-                try:
-                    import subprocess
-                    subprocess.run(['screen', '-S', 'web', '-X', 'quit'], capture_output=True)
-                    time.sleep(1)
-                    subprocess.run(['screen', '-dmS', 'web', 'bash', '-c', 'cd ~/maimai_rand_song && python3 -m web.backend.main 2>&1 | tee /tmp/web.log'], capture_output=True)
-                except Exception as e:
-                    print(f"Error in delayed restart: {e}")
-            import threading
-            thread = threading.Thread(target=delayed_restart)
-            thread.daemon = True
-            thread.start()
+            restart_script = '''#!/bin/bash
+# 等待3秒确保当前请求完成
+sleep 3
+
+# 关闭旧的web服务
+screen -S web -X quit 2>/dev/null
+
+# 等待1秒确保服务完全关闭
+sleep 1
+
+# 启动新的web服务
+screen -dmS web bash -c "cd ~/maimai_rand_song && python3 -m web.backend.main 2>&1 | tee /tmp/web.log"
+'''
+            script_path = '/tmp/web_restart.sh'
+            with open(script_path, 'w') as f:
+                f.write(restart_script)
+            import os
+            os.chmod(script_path, 0o755)
+            
+            # 使用nohup在完全独立的进程中执行
+            nohup_cmd = f'nohup bash {script_path} > /dev/null 2>&1 &'
+            subprocess.Popen(nohup_cmd, shell=True)
             return True
         return False
     except Exception as e:
