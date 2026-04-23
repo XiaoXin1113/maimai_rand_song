@@ -232,8 +232,28 @@ def save_service_config(config: dict):
 def restart_service(service_name: str) -> bool:
     try:
         if service_name == "bot":
-            cmd = 'screen -S bot -X quit; sleep 1; screen -dmS bot bash -c "cd ~/maimai_rand_song/bot && python3 main.py 2>&1 | tee /tmp/bot.log"'
-            subprocess.Popen(cmd, shell=True)
+            restart_script = '''#!/bin/bash
+# 等待2秒确保当前请求完成
+sleep 2
+
+# 关闭旧的bot服务
+screen -S bot -X quit 2>/dev/null
+
+# 等待2秒确保服务完全关闭
+sleep 2
+
+# 启动新的bot服务
+screen -dmS bot bash -c "cd /home/ubuntu/maimai_rand_song/bot && python3 main.py 2>&1 | tee /tmp/bot.log"
+'''
+            script_path = '/tmp/bot_restart.sh'
+            with open(script_path, 'w') as f:
+                f.write(restart_script)
+            import os
+            os.chmod(script_path, 0o755)
+            
+            # 使用nohup在完全独立的进程中执行
+            nohup_cmd = f'nohup bash {script_path} > /tmp/bot_restart.log 2>&1 &'
+            subprocess.Popen(nohup_cmd, shell=True)
             return True
         elif service_name == "web":
             restart_script = '''#!/bin/bash
