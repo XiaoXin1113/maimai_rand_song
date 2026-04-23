@@ -236,19 +236,20 @@ def restart_service(service_name: str) -> bool:
             subprocess.Popen(cmd, shell=True)
             return True
         elif service_name == "web":
-            script_content = '''#!/bin/bash
-sleep 2
-screen -S web -X quit
-sleep 1
-screen -dmS web bash -c "cd ~/maimai_rand_song && python3 -m web.backend.main 2>&1 | tee /tmp/web.log"
-'''
-            script_path = '/tmp/restart_web.sh'
-            with open(script_path, 'w') as f:
-                f.write(script_content)
-            import os
-            os.chmod(script_path, 0o755)
-            cmd = f'screen -dmS web_restart bash -c "bash {script_path}"'
-            subprocess.Popen(cmd, shell=True)
+            def delayed_restart():
+                import time
+                time.sleep(3)
+                try:
+                    import subprocess
+                    subprocess.run(['screen', '-S', 'web', '-X', 'quit'], capture_output=True)
+                    time.sleep(1)
+                    subprocess.run(['screen', '-dmS', 'web', 'bash', '-c', 'cd ~/maimai_rand_song && python3 -m web.backend.main 2>&1 | tee /tmp/web.log'], capture_output=True)
+                except Exception as e:
+                    print(f"Error in delayed restart: {e}")
+            import threading
+            thread = threading.Thread(target=delayed_restart)
+            thread.daemon = True
+            thread.start()
             return True
         return False
     except Exception as e:
